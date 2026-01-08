@@ -62,9 +62,13 @@ python -c "import nltk; nltk.download('punkt', quiet=True); nltk.download('avera
 
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
-    echo "Creating .env file from template..."
-    cp .env.template .env
-    echo -e "${YELLOW}⚠️  Please edit backend/.env and add your API keys and database credentials${NC}"
+    if [ -f ".env.template" ]; then
+        echo "Creating .env file from template..."
+        cp .env.template .env
+        echo -e "${YELLOW}⚠️  Please edit backend/.env and add your API keys and database credentials${NC}"
+    else
+        echo -e "${YELLOW}⚠️  .env.template not found. Please create backend/.env manually${NC}"
+    fi
 else
     echo "✓ .env file already exists"
 fi

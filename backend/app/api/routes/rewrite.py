@@ -23,32 +23,34 @@ def rewrite_text(
         rewriter = get_dspy_rewriter()
         fingerprint_service = get_fingerprint_service()
         
-        # Get user's fingerprint
-        user_fingerprint = fingerprint_service.get_user_fingerprint(db, current_user.id)
-        
-        if not user_fingerprint:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No fingerprint found. Please upload writing samples and generate a fingerprint first."
-            )
-        
-        fingerprint_dict = {
-            "feature_vector": user_fingerprint.feature_vector,
-            "model_version": user_fingerprint.model_version
-        }
-        
         # Generate style guidance
         if request.target_style:
+            # Use provided style guidance
             style_guidance = request.target_style
+            rewritten_text = rewriter.rewrite_text(
+                text=request.text,
+                style_guidance=style_guidance
+            )
         else:
+            # Get user's fingerprint for style matching
+            user_fingerprint = fingerprint_service.get_user_fingerprint(db, current_user.id)
+            
+            if not user_fingerprint:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No fingerprint found. Please upload writing samples and generate a fingerprint first, or provide a target_style."
+                )
+            
+            fingerprint_dict = {
+                "feature_vector": user_fingerprint.feature_vector,
+                "model_version": user_fingerprint.model_version
+            }
+            
             # Use fingerprint to generate style guidance
-            style_guidance = "Match the user's established writing style based on their fingerprint."
-        
-        # Rewrite text
-        rewritten_text = rewriter.rewrite_with_fingerprint(
-            text=request.text,
-            fingerprint=fingerprint_dict
-        )
+            rewritten_text = rewriter.rewrite_with_fingerprint(
+                text=request.text,
+                fingerprint=fingerprint_dict
+            )
         
         # For now, we'll just return the result
         # In a full implementation, you might want to save rewrite history

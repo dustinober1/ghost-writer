@@ -267,6 +267,15 @@ def get_dspy_rewriter(model: Optional[str] = None) -> DSPyRewriter:
     global _rewriter_instance
     
     if _rewriter_instance is None:
-        _rewriter_instance = DSPyRewriter(model=model)
+        try:
+            _rewriter_instance = DSPyRewriter(model=model)
+        except Exception as e:
+            # If initialization fails, create a fallback instance
+            print(f"Warning: Could not initialize DSPy rewriter: {e}")
+            print("Using fallback mode (direct API calls)")
+            _rewriter_instance = DSPyRewriter(model=model)
+            # Force fallback mode
+            _rewriter_instance.rewriter = None
+            _rewriter_instance.lm = None
     
     return _rewriter_instance
