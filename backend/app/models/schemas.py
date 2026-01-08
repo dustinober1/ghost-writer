@@ -109,3 +109,56 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+
+# Analytics Schemas
+class AnalyticsOverview(BaseModel):
+    total_analyses: int
+    total_rewrites: int
+    total_samples: int
+    has_fingerprint: bool
+    fingerprint_accuracy: Optional[float] = None
+    average_ai_probability: Optional[float] = None
+
+
+class ActivityEntry(BaseModel):
+    id: int
+    type: str  # 'analysis', 'rewrite', 'sample_upload', 'fingerprint_generated'
+    description: str
+    created_at: datetime
+    metadata: Optional[Dict] = None
+
+
+class TrendDataPoint(BaseModel):
+    date: str
+    count: int
+    value: Optional[float] = None
+
+
+class TrendData(BaseModel):
+    label: str
+    data: List[TrendDataPoint]
+
+
+class PerformanceMetrics(BaseModel):
+    average_ai_probability: float
+    high_confidence_count: int  # > 0.7
+    medium_confidence_count: int  # 0.4 - 0.7
+    low_confidence_count: int  # < 0.4
+    total_analyses: int
+
+
+class AnalysisHistoryItem(BaseModel):
+    id: int
+    text_preview: str
+    overall_ai_probability: float
+    word_count: int
+    created_at: datetime
+
+
+class AnalysisHistoryResponse(BaseModel):
+    items: List[AnalysisHistoryItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

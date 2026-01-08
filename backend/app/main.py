@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import auth, analysis, fingerprint, rewrite
+from app.api.routes import auth, analysis, fingerprint, rewrite, analytics
 from app.models.database import init_db
 from app.utils.db_check import check_db_connection
 
@@ -32,6 +32,7 @@ app.include_router(auth.router)
 app.include_router(analysis.router)
 app.include_router(fingerprint.router)
 app.include_router(rewrite.router)
+app.include_router(analytics.router)
 
 
 @app.on_event("startup")

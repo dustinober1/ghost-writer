@@ -157,4 +157,36 @@ export const rewriteAPI = {
   },
 };
 
+// Analytics API
+export const analyticsAPI = {
+  getOverview: async () => {
+    const response = await api.get('/api/analytics/overview');
+    return response.data;
+  },
+  getActivity: async (days: number = 30) => {
+    const response = await api.get(`/api/analytics/activity?days=${days}`);
+    return response.data;
+  },
+  getTrends: async (days: number = 30) => {
+    const response = await api.get(`/api/analytics/trends?days=${days}`);
+    return response.data;
+  },
+  getPerformance: async () => {
+    const response = await api.get('/api/analytics/performance');
+    return response.data;
+  },
+  getHistory: async (page: number = 1, pageSize: number = 20, search?: string, minProbability?: number, maxProbability?: number) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: pageSize.toString(),
+    });
+    if (search) params.append('search', search);
+    if (minProbability !== undefined) params.append('min_probability', minProbability.toString());
+    if (maxProbability !== undefined) params.append('max_probability', maxProbability.toString());
+    
+    const response = await api.get(`/api/analytics/history?${params.toString()}`);
+    return response.data;
+  },
+};
+
 export default api;
