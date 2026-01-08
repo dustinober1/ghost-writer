@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
 import Modal from '../ui/Modal';
 import { Upload, FileText, Fingerprint, CheckCircle2, X, Plus, Trash2, Sparkles, Clock, Target } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import ProgressBar from '../ui/ProgressBar';
 
 interface FingerprintStatus {
   has_fingerprint: boolean;
@@ -28,6 +29,7 @@ interface FingerprintStatus {
 export default function ProfileManager() {
   const [status, setStatus] = useState<FingerprintStatus | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const [uploadText, setUploadText] = useState('');
   const [fineTuneTexts, setFineTuneTexts] = useState<string[]>(['']);
   const [isDragging, setIsDragging] = useState(false);
@@ -71,11 +73,19 @@ export default function ProfileManager() {
     });
 
     setLoading(true);
+    setUploadProgress({ current: 0, total: validFiles.length, currentFile: validFiles[0]?.name || '' });
     let successCount = 0;
     let errorCount = 0;
 
     // Upload files sequentially to avoid overwhelming the backend
-    for (const file of validFiles) {
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      setUploadProgress({ 
+        current: i, 
+        total: validFiles.length, 
+        currentFile: file.name 
+      });
+
       try {
         await fingerprintAPI.upload(undefined, file);
         successCount++;
@@ -85,6 +95,12 @@ export default function ProfileManager() {
         showError(`Failed to upload "${file.name}": ${getErrorMessage(err)}`);
       }
     }
+
+    setUploadProgress({ 
+      current: validFiles.length, 
+      total: validFiles.length, 
+      currentFile: '' 
+    });
 
     if (successCount > 0) {
       if (validFiles.length === 1) {
@@ -96,6 +112,7 @@ export default function ProfileManager() {
     }
 
     setLoading(false);
+    setUploadProgress({ current: 0, total: 0, currentFile: '' });
   }, [success, showError]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -337,6 +354,19 @@ export default function ProfileManager() {
                   <FileText className="h-4 w-4 mr-2" />
                   {loading ? 'Uploading...' : 'Choose Files'}
                 </Button>
+                {loading && uploadProgress.total > 0 && (
+                  <div className="mt-4 w-full max-w-md mx-auto">
+                    <ProgressBar
+                      value={uploadProgress.current}
+                      max={uploadProgress.total}
+                      showLabel
+                      label={uploadProgress.currentFile 
+                        ? `Uploading: ${uploadProgress.currentFile} (${uploadProgress.current + 1}/${uploadProgress.total})`
+                        : `Processing files (${uploadProgress.current}/${uploadProgress.total})`}
+                      size="md"
+                    />
+                  </div>
+                )}
               </div>
             </TabsContent>
 

@@ -10,6 +10,7 @@ import Alert from '../ui/Alert';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
 import { Upload, FileText, X, Sparkles, Clock, File } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import ProgressBar from '../ui/ProgressBar';
 
 export default function TextInput() {
   const [text, setText] = useState('');
@@ -20,6 +21,8 @@ export default function TextInput() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [fileUploadProgress, setFileUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [textFromFiles, setTextFromFiles] = useState(false);
   const [showTextPreview, setShowTextPreview] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,19 +41,39 @@ export default function TextInput() {
 
     setLoading(true);
     setError('');
+    setAnalysisProgress(0);
+
+    // Simulate progress for analysis (since backend doesn't stream progress)
+    // Estimate based on text size - larger texts take longer
+    const estimatedTime = Math.min(10000, Math.max(2000, text.length * 2)); // 2-10 seconds
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress((prev) => {
+        if (prev >= 90) return prev; // Don't go to 100% until actual completion
+        return prev + Math.random() * 5; // Increment by 0-5% randomly
+      });
+    }, estimatedTime / 20); // Update ~20 times during estimated duration
 
     try {
       const result = await analysisAPI.analyze(text, granularity);
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+      
+      // Small delay to show 100% before navigation
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       sessionStorage.setItem('analysisResult', JSON.stringify(result));
       success('Analysis complete!');
       navigate('/analysis');
     } catch (err: any) {
+      clearInterval(progressInterval);
+      setAnalysisProgress(0);
       console.error('Analysis error:', err);
       const errorMsg = getErrorMessage(err);
       setError(errorMsg);
       showError(errorMsg);
     } finally {
       setLoading(false);
+      setAnalysisProgress(0);
     }
   };
 
@@ -75,28 +98,41 @@ export default function TextInput() {
       return validTypes.includes(fileExtension);
     });
 
+    setFileUploadProgress({ current: 0, total: validFiles.length, currentFile: validFiles[0]?.name || '' });
+
     try {
       const fileContents: string[] = [];
       const loadedNames: string[] = [];
 
-      // Read all files
-      await Promise.all(
-        validFiles.map((file) => {
-          return new Promise<void>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const content = event.target?.result as string;
-              fileContents.push(content);
-              loadedNames.push(file.name);
-              resolve();
-            };
-            reader.onerror = () => {
-              reject(new Error(`Error reading ${file.name}`));
-            };
-            reader.readAsText(file);
-          });
-        })
-      );
+      // Read files sequentially to show progress
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
+        setFileUploadProgress({ 
+          current: i, 
+          total: validFiles.length, 
+          currentFile: file.name 
+        });
+
+        await new Promise<void>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const content = event.target?.result as string;
+            fileContents.push(content);
+            loadedNames.push(file.name);
+            resolve();
+          };
+          reader.onerror = () => {
+            reject(new Error(`Error reading ${file.name}`));
+          };
+          reader.readAsText(file);
+        });
+      }
+
+      setFileUploadProgress({ 
+        current: validFiles.length, 
+        total: validFiles.length, 
+        currentFile: '' 
+      });
 
       // Concatenate all file contents with separators
       const separator = '\n\n---\n\n';
@@ -115,6 +151,7 @@ export default function TextInput() {
       showError(err.message || 'Error reading files');
     } finally {
       setUploadingFiles(false);
+      setFileUploadProgress({ current: 0, total: 0, currentFile: '' });
     }
   }, [showError, success]);
 
@@ -212,6 +249,19 @@ export default function TextInput() {
                       <File className="h-4 w-4 mr-2" />
                       {uploadingFiles ? 'Loading...' : 'Choose Files'}
                     </Button>
+                    {uploadingFiles && fileUploadProgress.total > 0 && (
+                      <div className="mt-4 w-full max-w-md mx-auto">
+                        <ProgressBar
+                          value={fileUploadProgress.current}
+                          max={fileUploadProgress.total}
+                          showLabel
+                          label={fileUploadProgress.currentFile 
+                            ? `Loading: ${fileUploadProgress.currentFile} (${fileUploadProgress.current + 1}/${fileUploadProgress.total})`
+                            : `Processing files (${fileUploadProgress.current}/${fileUploadProgress.total})`}
+                          size="md"
+                        />
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="flex items-center justify-between">
@@ -306,6 +356,22 @@ export default function TextInput() {
                 <Sparkles className="h-5 w-5 mr-2" />
                 {loading ? 'Analyzing...' : 'Analyze Text'}
               </Button>
+
+              {/* Analysis Progress */}
+              {loading && analysisProgress > 0 && (
+                <div className="mt-4">
+                  <ProgressBar
+                    value={analysisProgress}
+                    max={100}
+                    showLabel
+                    label={`Analyzing text... ${Math.round(analysisProgress)}%`}
+                    size="md"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                    Processing {wordCount.toLocaleString()} words • This may take a moment for large texts
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
