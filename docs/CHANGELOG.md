@@ -8,7 +8,7 @@
   - Works with any Ollama model (llama2, mistral, phi, etc.)
   - No API keys required
   - Complete privacy (data never leaves your machine)
-  - See `OLLAMA_SETUP.md` for setup instructions
+  - See `docs/OLLAMA_SETUP.md` for setup instructions
 
 ### Changed
 - Updated `dspy_rewriter.py` to support three LLM backends:
@@ -19,10 +19,10 @@
 - Improved error handling for Ollama connection issues
 
 ### Documentation
-- Added `OLLAMA_SETUP.md` with comprehensive setup guide
+- Added `docs/OLLAMA_SETUP.md` with comprehensive setup guide
 - Updated `README.md` to mention Ollama
-- Updated `QUICK_START.md` with Ollama configuration
-- Updated `NEXT_STEPS.md` with Ollama options
+- Updated `docs/QUICK_START.md` with Ollama configuration
+- Updated `docs/NEXT_STEPS.md` with Ollama options
 
 ## [Initial Release]
 

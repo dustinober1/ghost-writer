@@ -224,11 +224,6 @@ If you get out of memory errors:
 ./restart_container.sh -a -f
 ```
 
-**Windows PowerShell**:
-```powershell
-.\restart_container.ps1 -All
-```
-
 **Using Makefile**:
 ```bash
 make restart        # Quick restart

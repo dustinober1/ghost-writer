@@ -5,7 +5,7 @@
 Create a `.env` file in the `backend/` directory:
 
 **Note:** For style rewriting, you can use:
-- **Ollama** (recommended for free local LLM) - See `OLLAMA_SETUP.md`
+- **Ollama** (recommended for free local LLM) - See `docs/OLLAMA_SETUP.md`
 - **OpenAI** (requires API key)
 - **Anthropic** (requires API key)
 
@@ -20,7 +20,7 @@ OPENAI_API_KEY=your-openai-api-key-here
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 
 # Ollama Configuration (for local LLM - free alternative)
-# See OLLAMA_SETUP.md for setup instructions
+# See docs/OLLAMA_SETUP.md for setup instructions
 DEFAULT_LLM_MODEL=ollama  # Options: openai, anthropic, ollama
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama2
@@ -109,7 +109,7 @@ The application should now be accessible at:
 3. **Generate your fingerprint** after uploading samples
 4. **Test text analysis** by pasting some text
 5. **Test style rewriting**:
-   - **With Ollama**: Install Ollama and set `DEFAULT_LLM_MODEL=ollama` (see `OLLAMA_SETUP.md`)
+   - **With Ollama**: Install Ollama and set `DEFAULT_LLM_MODEL=ollama` (see `docs/OLLAMA_SETUP.md`)
    - **With OpenAI/Anthropic**: Set API keys in `.env`
 
 ## 7. Train the Contrastive Model (Optional but Recommended)

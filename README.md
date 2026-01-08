@@ -30,7 +30,7 @@ Then:
 2. Create demo user: `docker-compose exec backend python scripts/seed_default_user.py`
 3. Access at http://localhost:3000
 
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker instructions.
+See [docs/DOCKER_SETUP.md](docs/DOCKER_SETUP.md) for detailed Docker instructions.
 
 ## Manual Setup
 

@@ -34,18 +34,10 @@ All four tasks have been completed:
 - Runs database migrations
 - Provides clear next steps
 
-### Windows: `setup.ps1`
-- Same functionality as bash script
-- PowerShell-compatible
-- Handles Windows paths correctly
-
 ### Usage:
 ```bash
 # Linux/Mac
 ./setup.sh
-
-# Windows
-.\setup.ps1
 ```
 
 ## 4. ✅ Reviewed and Fixed DSPy Integration
@@ -76,9 +68,8 @@ All four tasks have been completed:
 ### New Files:
 - `backend/.env.template` - Environment variable template
 - `setup.sh` - Automated setup script (Linux/Mac)
-- `setup.ps1` - Automated setup script (Windows)
-- `QUICK_START.md` - Quick reference guide
-- `SETUP_COMPLETE.md` - This file
+- `docs/QUICK_START.md` - Quick reference guide
+- `docs/SETUP_COMPLETE.md` - This file
 
 ### Modified Files:
 - `backend/app/ml/dspy_rewriter.py` - Improved DSPy integration with fallbacks
@@ -88,7 +79,7 @@ All four tasks have been completed:
 
 1. **Run the setup script:**
    ```bash
-   ./setup.sh  # or .\setup.ps1 on Windows
+   ./setup.sh
    ```
 
 2. **Edit `.env` file:**
@@ -151,8 +142,8 @@ All four tasks have been completed:
 
 ## 📚 Documentation
 
-- `QUICK_START.md` - Fast setup guide
-- `NEXT_STEPS.md` - Detailed setup instructions
+- `docs/QUICK_START.md` - Fast setup guide
+- `docs/NEXT_STEPS.md` - Detailed setup instructions
 - `README.md` - Project overview
 - `backend/.env.template` - Configuration template
 

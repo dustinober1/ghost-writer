@@ -9,11 +9,6 @@
 ./setup.sh
 ```
 
-**Windows:**
-```powershell
-.\setup.ps1
-```
-
 ### Option 2: Manual Setup
 
 1. **Backend Setup:**
@@ -141,7 +136,7 @@ Then log in with:
 
 ## 📚 Next Steps
 
-- See `NEXT_STEPS.md` for detailed setup instructions
-- See `OLLAMA_SETUP.md` for local LLM setup (free alternative)
+- See `docs/NEXT_STEPS.md` for detailed setup instructions
+- See `docs/OLLAMA_SETUP.md` for local LLM setup (free alternative)
 - See `README.md` for project overview
 - Check API documentation at http://localhost:8000/docs
