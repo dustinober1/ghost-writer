@@ -43,6 +43,9 @@ class WritingSampleResponse(WritingSampleBase):
 class FingerprintBase(BaseModel):
     feature_vector: Dict
     model_version: str
+    
+    class Config:
+        protected_namespaces = ()
 
 
 class FingerprintResponse(FingerprintBase):
