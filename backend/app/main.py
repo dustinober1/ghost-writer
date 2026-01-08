@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import auth, analysis, fingerprint, rewrite
 from app.models.database import init_db
+from app.utils.db_check import check_db_connection
 
 app = FastAPI(
     title="Ghostwriter Forensic Analytics API",
@@ -28,7 +29,13 @@ app.include_router(rewrite.router)
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
-    init_db()
+    # Try to initialize database, but don't fail if it's not available
+    # This allows the API to start even if database isn't configured yet
+    try:
+        init_db()
+    except Exception as e:
+        print(f"⚠️  Database initialization skipped: {e}")
+        print("   API will start, but database-dependent endpoints may not work.")
 
 
 @app.get("/")
@@ -40,4 +47,9 @@ def root():
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
+    is_connected, message = check_db_connection()
+    return {
+        "status": "healthy",
+        "database": "connected" if is_connected else "disconnected",
+        "message": message
+    }
