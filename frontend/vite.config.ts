@@ -11,7 +11,10 @@ export default defineConfig({
       '/api': {
         // In Docker, Vite proxy runs in container, so use backend service name
         // For local dev, use localhost
-        target: process.env.VITE_API_BASE_URL || (process.env.DOCKER ? 'http://backend:8000' : 'http://localhost:8000'),
+        // If VITE_API_BASE_URL is explicitly set and non-empty, use it; otherwise use Docker/localhost logic
+        target: (process.env.VITE_API_BASE_URL && process.env.VITE_API_BASE_URL.trim() !== '') 
+          ? process.env.VITE_API_BASE_URL 
+          : (process.env.DOCKER ? 'http://backend:8000' : 'http://localhost:8000'),
         changeOrigin: true,
       },
     },

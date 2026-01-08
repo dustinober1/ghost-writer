@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// API base URL - use environment variable or default to localhost:8000
-// In browser, we always use localhost (or the host) since browser can't access Docker service names
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 
-  `${window.location.protocol}//${window.location.hostname}:8000`;
+// API base URL - use environment variable or default to relative path
+// When running in Vite dev server, use relative URLs to leverage the proxy
+// In production or when VITE_API_BASE_URL is explicitly set, use that
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

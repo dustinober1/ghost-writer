@@ -6,6 +6,16 @@ import os
 import json
 from pathlib import Path
 
+from docx import Document  # python-docx, already in backend requirements
+
+try:
+    # Optional: only needed if you want real PDFs
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
 # Sample human-written texts (more varied, natural)
 HUMAN_SAMPLES = [
     """I've always found that the best way to understand something is to actually do it yourself. 
@@ -293,6 +303,110 @@ def create_demo_samples():
     return output_file
 
 
+def _write_txt_file(path: Path, text: str):
+    path.write_text(text.strip() + "\n", encoding="utf-8")
+
+
+def _write_docx_file(path: Path, text: str):
+    doc = Document()
+    for para in text.strip().split("\n\n"):
+        doc.add_paragraph(para.strip())
+    doc.save(path)
+
+
+def _write_pdf_file(path: Path, text: str):
+    """
+    Simple PDF writer using reportlab.
+    Falls back to no-op if reportlab is not installed.
+    """
+    if not REPORTLAB_AVAILABLE:
+        return
+
+    c = canvas.Canvas(str(path), pagesize=letter)
+    width, height = letter
+    x_margin = 72  # 1 inch
+    y = height - 72
+
+    lines = text.strip().splitlines()
+    for line in lines:
+        # crude line wrapping: split very long lines
+        chunks = [line[i : i + 90] for i in range(0, len(line), 90)] or [""]
+        for chunk in chunks:
+            c.drawString(x_margin, y, chunk)
+            y -= 14
+            if y < 72:  # new page
+                c.showPage()
+                y = height - 72
+
+    c.showPage()
+    c.save()
+
+
+def create_demo_documents():
+    """
+    Create synthetic documents (txt, docx, pdf) for manual testing.
+
+    Output layout:
+      ml_models/data/synthetic_documents/
+        human/
+          human_01.txt
+          human_01.docx
+          human_01.pdf
+          ...
+        ai/
+          ai_01.txt
+          ...
+        mixed/
+          mixed_01.txt
+          ...
+
+    PDFs are only generated if `reportlab` is installed.
+    """
+    base_dir = Path(__file__).parent / "synthetic_documents"
+    human_dir = base_dir / "human"
+    ai_dir = base_dir / "ai"
+    mixed_dir = base_dir / "mixed"
+
+    for d in (human_dir, ai_dir, mixed_dir):
+        d.mkdir(parents=True, exist_ok=True)
+
+    # Use curated demo samples for nicer documents
+    human_texts = HUMAN_SAMPLES + HUMAN_SAMPLES_EXTENDED
+    ai_texts = AI_SAMPLES + AI_SAMPLES_EXTENDED
+
+    mixed_texts = [
+        """This is a sample text that might be written by either a human or an AI. It contains 
+some characteristics of both styles. The sentence structure is relatively uniform, but 
+there are occasional variations. The vocabulary is moderately diverse, and the tone is 
+somewhat neutral. Determining the origin requires careful analysis of multiple features.""",
+        """I think that sometimes writing can be challenging, but also rewarding. The process 
+involves thinking about what you want to say and how to say it effectively. Different 
+people have different styles, and that's what makes writing interesting. Practice 
+helps improve your skills over time.""",
+    ]
+
+    # Helper to generate all three formats
+    def generate_set(texts, out_dir: Path, prefix: str):
+        for idx, text in enumerate(texts, start=1):
+            stem = f"{prefix}_{idx:02d}"
+            txt_path = out_dir / f"{stem}.txt"
+            docx_path = out_dir / f"{stem}.docx"
+            pdf_path = out_dir / f"{stem}.pdf"
+
+            _write_txt_file(txt_path, text)
+            _write_docx_file(docx_path, text)
+            _write_pdf_file(pdf_path, text)
+
+    generate_set(human_texts, human_dir, "human")
+    generate_set(ai_texts, ai_dir, "ai")
+    generate_set(mixed_texts, mixed_dir, "mixed")
+
+    print(f"✓ Created synthetic documents in {base_dir}")
+    if not REPORTLAB_AVAILABLE:
+        print("  (PDF generation skipped – install `reportlab` to enable real PDFs)")
+    return base_dir
+
+
 def main():
     """Generate all synthetic data"""
     print("Generating synthetic data for Ghostwriter...")
@@ -309,10 +423,14 @@ def main():
     
     # Create demo samples
     create_demo_samples()
+
+    # Create demo documents for upload testing
+    create_demo_documents()
     
     print("=" * 50)
     print("✅ All synthetic data generated successfully!")
     print("\nFiles created in ml_models/data/training_samples/")
+    print("and ml_models/data/synthetic_documents/ (txt/docx/pdf)")
     print("\nYou can now:")
     print("1. Use these samples to train the contrastive model")
     print("2. Upload them as writing samples to test fingerprinting")

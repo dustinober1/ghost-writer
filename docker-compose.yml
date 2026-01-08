@@ -60,7 +60,8 @@ services:
       dockerfile: Dockerfile
     container_name: ghostwriter_frontend
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
+      # Use empty string to enable relative URLs and Vite proxy
+      - VITE_API_BASE_URL=
       - DOCKER=true
     ports:
       - "3000:3000"
