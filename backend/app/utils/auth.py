@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.database import get_db, User
 from app.models.schemas import TokenData
 import os
+import hashlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,15 +20,36 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
+# Bcrypt has a 72-byte limit for passwords
+BCRYPT_MAX_PASSWORD_LENGTH = 72
+
+
+def _prepare_password_for_bcrypt(password: str) -> str:
+    """
+    Prepare password for bcrypt hashing.
+    If password is longer than 72 bytes, hash it with SHA-256 first.
+    This preserves security while working within bcrypt's limitations.
+    Returns a string that bcrypt can handle.
+    """
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > BCRYPT_MAX_PASSWORD_LENGTH:
+        # Hash with SHA-256 first (produces 32 bytes = 64 hex chars)
+        # This is still under 72 bytes, so bcrypt can handle it
+        return hashlib.sha256(password_bytes).hexdigest()
+    return password
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    # Prepare password the same way we did during hashing
+    prepared = _prepare_password_for_bcrypt(plain_password)
+    return pwd_context.verify(prepared, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """Hash a password, handling passwords longer than bcrypt's 72-byte limit"""
+    prepared = _prepare_password_for_bcrypt(password)
+    return pwd_context.hash(prepared)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
