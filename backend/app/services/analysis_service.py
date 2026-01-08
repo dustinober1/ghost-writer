@@ -7,6 +7,7 @@ import numpy as np
 from app.ml.feature_extraction import extract_feature_vector, extract_all_features
 from app.ml.contrastive_model import get_contrastive_model
 from app.ml.fingerprint import compare_to_fingerprint
+from app.ml.ollama_embeddings import get_ollama_embedding
 from app.utils.text_processing import split_into_sentences, split_into_paragraphs
 
 
@@ -20,7 +21,8 @@ class AnalysisService:
         self,
         text: str,
         granularity: str = "sentence",
-        user_fingerprint: Optional[Dict] = None
+        user_fingerprint: Optional[Dict] = None,
+        embedder: str = "stylometric",
     ) -> Dict:
         """
         Analyze text and generate heat map data with AI probability scores.
@@ -52,8 +54,13 @@ class AnalysisService:
             if not segment.strip():
                 continue
             
-            # Extract features
+            # Always extract stylometric features (used for heuristics and fingerprint path)
             segment_features = extract_feature_vector(segment)
+
+            # Optionally get Ollama embedding for this segment
+            ollama_embedding = None
+            if embedder == "ollama":
+                ollama_embedding = get_ollama_embedding(segment)
             
             # Calculate AI probability
             if user_fingerprint:
@@ -63,9 +70,21 @@ class AnalysisService:
                 # Low similarity = AI-like (high AI probability)
                 ai_probability = 1.0 - similarity
             else:
-                # Use contrastive model with a generic human reference
-                # For now, use a simple heuristic based on features
-                ai_probability = self._estimate_ai_probability(segment_features)
+                # Base stylometric heuristic
+                base_ai_prob = self._estimate_ai_probability(segment_features)
+
+                if embedder == "ollama" and ollama_embedding is not None:
+                    # Simple heuristic using Ollama embedding magnitude as an additional signal.
+                    # This is intentionally lightweight until a trained head is available.
+                    emb_norm = float(np.linalg.norm(ollama_embedding))
+                    # Map norm to [0, 1] where smaller norm => more AI-like
+                    norm_score = 1.0 / (1.0 + emb_norm)
+                    # Blend stylometric heuristic with embedding-based score
+                    ai_probability = float(
+                        max(0.0, min(1.0, 0.7 * base_ai_prob + 0.3 * norm_score))
+                    )
+                else:
+                    ai_probability = base_ai_prob
             
             # Find segment position in original text
             start_index = text.find(segment, current_index)

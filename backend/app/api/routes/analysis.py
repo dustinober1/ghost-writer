@@ -36,7 +36,8 @@ def analyze_text(
         result = analysis_service.analyze_text(
             text=request.text,
             granularity=request.granularity,
-            user_fingerprint=fingerprint_dict
+            user_fingerprint=fingerprint_dict,
+            embedder=request.embedder or "stylometric",
         )
         
         # Convert to response format

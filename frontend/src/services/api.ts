@@ -105,8 +105,12 @@ export const authAPI = {
 
 // Analysis API
 export const analysisAPI = {
-  analyze: async (text: string, granularity: 'sentence' | 'paragraph' = 'sentence') => {
-    const response = await api.post('/api/analysis/analyze', { text, granularity });
+  analyze: async (
+    text: string,
+    granularity: 'sentence' | 'paragraph' = 'sentence',
+    embedder: 'stylometric' | 'ollama' = 'stylometric'
+  ) => {
+    const response = await api.post('/api/analysis/analyze', { text, granularity, embedder });
     return response.data;
   },
 };

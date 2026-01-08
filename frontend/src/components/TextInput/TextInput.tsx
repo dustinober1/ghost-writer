@@ -18,11 +18,13 @@ export default function TextInput() {
   const [error, setError] = useState('');
   const [granularity, setGranularity] = useState<'sentence' | 'paragraph'>('sentence');
   const [analysisMode, setAnalysisMode] = useState<'standard' | 'detailed' | 'quick'>('standard');
+  const [embedder, setEmbedder] = useState<'stylometric' | 'ollama'>('stylometric');
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [fileUploadProgress, setFileUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [showAnalysisHelp, setShowAnalysisHelp] = useState(false);
   const [textFromFiles, setTextFromFiles] = useState(false);
   const [showTextPreview, setShowTextPreview] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,20 +44,27 @@ export default function TextInput() {
     setLoading(true);
     setError('');
     setAnalysisProgress(0);
+    setShowAnalysisHelp(false);
 
     // Simulate progress for analysis (since backend doesn't stream progress)
     // Estimate based on text size - larger texts take longer
     const estimatedTime = Math.min(10000, Math.max(2000, text.length * 2)); // 2-10 seconds
     const progressInterval = setInterval(() => {
       setAnalysisProgress((prev) => {
-        if (prev >= 90) return prev; // Don't go to 100% until actual completion
+        if (prev >= 95) return prev; // Don't go to 100% until actual completion
         return prev + Math.random() * 5; // Increment by 0-5% randomly
       });
     }, estimatedTime / 20); // Update ~20 times during estimated duration
 
+    // If it's taking unusually long, show troubleshooting help
+    const helpTimeout = setTimeout(() => {
+      setShowAnalysisHelp(true);
+    }, 20000); // 20s
+
     try {
-      const result = await analysisAPI.analyze(text, granularity);
+      const result = await analysisAPI.analyze(text, granularity, embedder);
       clearInterval(progressInterval);
+      clearTimeout(helpTimeout);
       setAnalysisProgress(100);
       
       // Small delay to show 100% before navigation
@@ -66,6 +75,7 @@ export default function TextInput() {
       navigate('/analysis');
     } catch (err: any) {
       clearInterval(progressInterval);
+      clearTimeout(helpTimeout);
       setAnalysisProgress(0);
       console.error('Analysis error:', err);
       const errorMsg = getErrorMessage(err);
@@ -74,6 +84,7 @@ export default function TextInput() {
     } finally {
       setLoading(false);
       setAnalysisProgress(0);
+      setShowAnalysisHelp(false);
     }
   };
 
@@ -336,13 +347,53 @@ export default function TextInput() {
               )}
 
               {/* Analysis Options */}
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Tabs value={granularity} onValueChange={(v) => setGranularity(v as 'sentence' | 'paragraph')}>
-                  <TabsList>
-                    <TabsTrigger value="sentence">Sentence-level</TabsTrigger>
-                    <TabsTrigger value="paragraph">Paragraph-level</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Granularity
+                  </p>
+                  <Tabs value={granularity} onValueChange={(v) => setGranularity(v as 'sentence' | 'paragraph')}>
+                    <TabsList>
+                      <TabsTrigger value="sentence">Sentence-level</TabsTrigger>
+                      <TabsTrigger value="paragraph">Paragraph-level</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Embedder
+                  </p>
+                  <div className="inline-flex h-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setEmbedder('stylometric')}
+                      className={cn(
+                        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                        embedder === 'stylometric'
+                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                      )}
+                    >
+                      Stylometric (built-in)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEmbedder('ollama')}
+                      className={cn(
+                        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                        embedder === 'ollama'
+                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                      )}
+                    >
+                      Ollama embeddings
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                    Ollama requires the backend to be configured with a local Ollama server and embedding model.
+                  </p>
+                </div>
               </div>
 
               {/* Analyze Button */}
@@ -370,6 +421,17 @@ export default function TextInput() {
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
                     Processing {wordCount.toLocaleString()} words • This may take a moment for large texts
                   </p>
+                  {showAnalysisHelp && (
+                    <div className="mt-3 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-md p-2 text-left">
+                      <p className="font-semibold mb-1">Taking longer than usual?</p>
+                      <ul className="list-disc list-inside space-y-0.5">
+                        <li>Very large inputs can take 30–60 seconds to analyze.</li>
+                        <li>Make sure the backend (`/api/analysis/analyze`) is running and reachable.</li>
+                        <li>Check the backend logs for errors if it stays stuck.</li>
+                        <li>If this happens repeatedly with small inputs, try refreshing the page.</li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
