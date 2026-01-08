@@ -42,9 +42,9 @@ class DSPyRewriter:
         Initialize DSPy rewriter.
         
         Args:
-            model: Model to use ("openai" or "anthropic"). Defaults to OpenAI.
+            model: Model to use ("openai", "anthropic", or "ollama"). Defaults to OpenAI.
         """
-        self.model_name = model or "openai"
+        self.model_name = model or os.getenv("DEFAULT_LLM_MODEL", "openai")
         self.rewriter = None
         self.lm = None
         
@@ -74,8 +74,23 @@ class DSPyRewriter:
                     raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
                 # DSPy may need different setup for Anthropic
                 self.lm = dspy.LM(model="claude-3-opus-20240229", api_key=api_key)
+            elif self.model_name == "ollama":
+                # Ollama uses OpenAI-compatible API
+                ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                ollama_model = os.getenv("OLLAMA_MODEL", "llama2")
+                try:
+                    # DSPy may not support custom base URLs directly
+                    # So we'll use fallback mode for Ollama
+                    print("Ollama selected. Using direct API calls (DSPy may not support custom base URLs).")
+                    self.lm = None
+                    self.rewriter = None
+                except Exception as e:
+                    print(f"Warning: Could not setup Ollama with DSPy: {e}")
+                    print("Falling back to direct API calls.")
+                    self.lm = None
+                    self.rewriter = None
             else:
-                raise ValueError(f"Unsupported model: {self.model_name}")
+                raise ValueError(f"Unsupported model: {self.model_name}. Supported: openai, anthropic, ollama")
             
             dspy.configure(lm=self.lm)
         except Exception as e:
@@ -144,8 +159,10 @@ class DSPyRewriter:
             return self._rewrite_with_openai(text, style_guidance)
         elif self.model_name == "anthropic":
             return self._rewrite_with_anthropic(text, style_guidance)
+        elif self.model_name == "ollama":
+            return self._rewrite_with_ollama(text, style_guidance)
         else:
-            raise ValueError(f"Unsupported model: {self.model_name}")
+            raise ValueError(f"Unsupported model: {self.model_name}. Supported: openai, anthropic, ollama")
     
     def _rewrite_with_openai(self, text: str, style_guidance: str) -> str:
         """Rewrite using OpenAI API directly"""
@@ -209,6 +226,62 @@ Rewritten text:"""
             return message.content[0].text.strip()
         except Exception as e:
             raise Exception(f"Error with Anthropic API: {str(e)}")
+    
+    def _rewrite_with_ollama(self, text: str, style_guidance: str) -> str:
+        """Rewrite using Ollama API directly"""
+        try:
+            import requests
+            ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            ollama_model = os.getenv("OLLAMA_MODEL", "llama2")
+            
+            prompt = f"""Rewrite the following text to match this style:
+{style_guidance}
+
+Original text:
+{text}
+
+Rewritten text:"""
+            
+            # Ollama uses OpenAI-compatible API format
+            # Try OpenAI-compatible endpoint first
+            try:
+                import openai
+                client = openai.OpenAI(
+                    base_url=f"{ollama_base_url}/v1",
+                    api_key="ollama"  # Ollama doesn't require a real API key
+                )
+                
+                response = client.chat.completions.create(
+                    model=ollama_model,
+                    messages=[
+                        {"role": "system", "content": "You are a writing style expert who rewrites text to match specific styles while preserving meaning."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                return response.choices[0].message.content.strip()
+            except ImportError:
+                # Fallback to direct HTTP request
+                response = requests.post(
+                    f"{ollama_base_url}/api/generate",
+                    json={
+                        "model": ollama_model,
+                        "prompt": f"You are a writing style expert. {prompt}",
+                        "stream": False,
+                        "options": {
+                            "temperature": 0.7,
+                            "num_predict": 2000
+                        }
+                    },
+                    timeout=120
+                )
+                response.raise_for_status()
+                return response.json()["response"].strip()
+                
+        except Exception as e:
+            raise Exception(f"Error with Ollama API: {str(e)}. Make sure Ollama is running on {ollama_base_url}")
     
     def rewrite_with_fingerprint(
         self,

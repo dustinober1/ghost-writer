@@ -69,7 +69,10 @@ cp .env.template .env
 
 - **Database URL** (if not using Docker defaults)
 - **SECRET_KEY** (generate a random string)
-- **OPENAI_API_KEY** or **ANTHROPIC_API_KEY** (for rewriting feature)
+- **LLM Provider** (choose one):
+  - **Ollama** (free, local): Set `DEFAULT_LLM_MODEL=ollama` and `OLLAMA_MODEL=llama2`
+  - **OpenAI**: Set `OPENAI_API_KEY=your-key`
+  - **Anthropic**: Set `ANTHROPIC_API_KEY=your-key`
 
 ### 3. Generate a Secret Key:
 
@@ -124,5 +127,6 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 ## 📚 Next Steps
 
 - See `NEXT_STEPS.md` for detailed setup instructions
+- See `OLLAMA_SETUP.md` for local LLM setup (free alternative)
 - See `README.md` for project overview
 - Check API documentation at http://localhost:8000/docs

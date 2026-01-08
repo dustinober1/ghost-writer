@@ -15,7 +15,7 @@ A full-stack forensic analytics application that uses stylometric fingerprinting
 - **Backend**: FastAPI, PostgreSQL, SQLAlchemy
 - **Frontend**: React, TypeScript, Vite
 - **ML**: PyTorch, Transformers, DSPy
-- **APIs**: OpenAI, Anthropic
+- **APIs**: OpenAI, Anthropic, Ollama (local LLM)
 
 ## Setup
 
