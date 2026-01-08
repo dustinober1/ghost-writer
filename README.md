@@ -17,13 +17,28 @@ A full-stack forensic analytics application that uses stylometric fingerprinting
 - **ML**: PyTorch, Transformers, DSPy
 - **APIs**: OpenAI, Anthropic, Ollama (local LLM)
 
-## Setup
+## Quick Start with Docker (Recommended)
+
+Launch everything with one command:
+
+```bash
+docker-compose up --build
+```
+
+Then:
+1. Initialize database: `docker-compose exec backend alembic upgrade head`
+2. Create demo user: `docker-compose exec backend python scripts/seed_default_user.py`
+3. Access at http://localhost:3000
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker instructions.
+
+## Manual Setup
 
 ### Prerequisites
 
 - Python 3.10+
 - Node.js 18+
-- PostgreSQL 14+
+- PostgreSQL 14+ (or use Docker)
 
 ### Backend Setup
 
@@ -32,7 +47,7 @@ cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env  # Edit .env with your configuration
+cp .env.template .env  # Edit .env with your configuration
 ```
 
 ### Frontend Setup

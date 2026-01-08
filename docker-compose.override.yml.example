@@ -1,0 +1,25 @@
+# Example override file for local development
+# Copy this to docker-compose.override.yml to customize settings
+# docker-compose automatically uses override files
+
+version: '3.8'
+
+services:
+  backend:
+    environment:
+      # Override with your local settings
+      SECRET_KEY: your-local-secret-key
+      OPENAI_API_KEY: your-openai-key
+      ANTHROPIC_API_KEY: your-anthropic-key
+      DEFAULT_LLM_MODEL: ollama
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+    volumes:
+      # Mount local code for development
+      - ./backend:/app
+      - ./ml_models:/app/ml_models
+
+  frontend:
+    volumes:
+      # Mount local code for development
+      - ./frontend:/app
+      - /app/node_modules
