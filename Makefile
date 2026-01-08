@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs clean seed migrate
+.PHONY: help build up down restart restart-clean restart-all logs clean seed migrate
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -18,8 +18,14 @@ up-logs: ## Start all services and show logs
 down: ## Stop all services
 	docker-compose down
 
-restart: ## Restart all services
-	docker-compose restart
+restart: ## Restart all services (quick, keeps volumes and images)
+	./restart_container.sh
+
+restart-clean: ## Restart and remove volumes (database will be reset)
+	./restart_container.sh -v
+
+restart-all: ## Complete clean restart (removes volumes and images)
+	./restart_container.sh -a
 
 logs: ## Show logs from all services
 	docker-compose logs -f

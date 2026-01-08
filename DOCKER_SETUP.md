@@ -202,8 +202,49 @@ If you get out of memory errors:
 2. Or use smaller ML models
 3. Or run services separately instead of all at once
 
-### Rebuild Everything
+### Complete Clean Restart
 
+**Quick restart** (keeps volumes and images):
+```bash
+./restart_container.sh
+```
+
+**Remove volumes** (database will be reset):
+```bash
+./restart_container.sh -v
+```
+
+**Complete clean** (removes volumes and images, full rebuild):
+```bash
+./restart_container.sh -a
+```
+
+**Skip confirmation prompts**:
+```bash
+./restart_container.sh -a -f
+```
+
+**Windows PowerShell**:
+```powershell
+.\restart_container.ps1 -All
+```
+
+**Using Makefile**:
+```bash
+make restart        # Quick restart
+make restart-clean  # Remove volumes
+make restart-all    # Complete clean
+```
+
+The restart script will:
+1. Stop and remove containers
+2. Optionally remove volumes and images
+3. Clean up unused Docker resources
+4. Rebuild images from scratch
+5. Start containers
+6. Show status and logs
+
+**Manual rebuild** (alternative):
 ```bash
 # Stop and remove everything
 docker-compose down -v
