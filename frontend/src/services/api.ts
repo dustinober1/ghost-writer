@@ -18,10 +18,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token refresh on 401
+// Handle token refresh on 401 and log errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log error for debugging
+    if (error.response) {
+      console.error('API Error:', error.response.status, error.response.data);
+    } else if (error.request) {
+      console.error('Network Error: No response from server. Is the backend running?');
+    } else {
+      console.error('Error:', error.message);
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('access_token');
       window.location.href = '/login';

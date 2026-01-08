@@ -24,7 +24,14 @@ function TextInput() {
       sessionStorage.setItem('analysisResult', JSON.stringify(result));
       navigate('/analysis');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error analyzing text');
+      console.error('Analysis error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error analyzing text');
+      }
     } finally {
       setLoading(false);
     }

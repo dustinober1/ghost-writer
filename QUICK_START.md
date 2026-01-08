@@ -118,11 +118,26 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ## 🎯 First Steps After Setup
 
+### Option 1: Use Default Demo User (Quick Start)
+
+```bash
+# Create default demo user
+cd backend
+source venv/bin/activate
+python scripts/seed_default_user.py
+```
+
+Then log in with:
+- **Email:** `demo@ghostwriter.com`
+- **Password:** `demo123`
+
+### Option 2: Register Your Own Account
+
 1. **Register a new user** at the login page
 2. **Upload writing samples** in Profile section (at least 2-3 samples)
 3. **Generate your fingerprint** after uploading samples
 4. **Test text analysis** by pasting some text
-5. **Try style rewriting** (requires API keys)
+5. **Try style rewriting** (requires API keys or Ollama)
 
 ## 📚 Next Steps
 

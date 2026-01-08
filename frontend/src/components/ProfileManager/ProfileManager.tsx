@@ -34,7 +34,14 @@ function ProfileManager() {
       const data = await fingerprintAPI.getStatus();
       setStatus(data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error loading fingerprint status');
+      console.error('Load status error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error loading fingerprint status');
+      }
     }
   };
 
@@ -51,7 +58,14 @@ function ProfileManager() {
       setSuccess('File uploaded successfully!');
       await loadStatus();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error uploading file');
+      console.error('Upload error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error uploading file');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +87,14 @@ function ProfileManager() {
       setUploadText('');
       await loadStatus();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error uploading text');
+      console.error('Upload text error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error uploading text');
+      }
     } finally {
       setLoading(false);
     }
@@ -89,7 +110,14 @@ function ProfileManager() {
       setSuccess('Fingerprint generated successfully!');
       await loadStatus();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error generating fingerprint');
+      console.error('Generate fingerprint error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error generating fingerprint');
+      }
     } finally {
       setLoading(false);
     }
@@ -112,7 +140,14 @@ function ProfileManager() {
       setFineTuneTexts(['']);
       await loadStatus();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Error fine-tuning fingerprint');
+      console.error('Fine-tune error:', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        setError('Cannot connect to server. Make sure the backend is running.');
+      } else {
+        setError(err.message || 'Error fine-tuning fingerprint');
+      }
     } finally {
       setLoading(false);
     }

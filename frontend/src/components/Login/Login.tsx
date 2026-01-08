@@ -27,7 +27,19 @@ function Login() {
         setIsLogin(true);
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'An error occurred');
+      console.error('Login/Register error:', err);
+      
+      // More detailed error handling
+      if (err.response) {
+        // Server responded with error
+        setError(err.response.data?.detail || err.response.data?.message || `Server error: ${err.response.status}`);
+      } else if (err.request) {
+        // Request was made but no response received
+        setError('Cannot connect to server. Make sure the backend is running on http://localhost:8000');
+      } else {
+        // Something else happened
+        setError(err.message || 'An unexpected error occurred');
+      }
     } finally {
       setLoading(false);
     }

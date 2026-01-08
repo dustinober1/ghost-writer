@@ -59,11 +59,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.post("/login-json", response_model=Token)
-def login_json(email: str, password: str, db: Session = Depends(get_db)):
+def login_json(user_data: UserCreate, db: Session = Depends(get_db)):
     """Login endpoint that accepts JSON (alternative to form data)"""
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == user_data.email).first()
     
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not verify_password(user_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

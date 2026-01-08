@@ -32,6 +32,18 @@ npm run dev
 
 ### Step 3: Create a User Account
 
+**Option A: Use Default Demo User (Quickest)**
+```bash
+cd backend
+source venv/bin/activate
+python scripts/seed_default_user.py
+```
+
+Then log in with:
+- **Email:** `demo@ghostwriter.com`
+- **Password:** `demo123`
+
+**Option B: Register New Account**
 1. Go to http://localhost:3000
 2. Click "Register"
 3. Create an account (e.g., demo@example.com)
