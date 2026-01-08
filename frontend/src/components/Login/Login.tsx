@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../../services/api';
+import { authAPI, getErrorMessage } from '../../services/api';
 import './Login.css';
 
 function Login() {
@@ -28,18 +28,7 @@ function Login() {
       }
     } catch (err: any) {
       console.error('Login/Register error:', err);
-      
-      // More detailed error handling
-      if (err.response) {
-        // Server responded with error
-        setError(err.response.data?.detail || err.response.data?.message || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        // Request was made but no response received
-        setError('Cannot connect to server. Make sure the backend is running on http://localhost:8000');
-      } else {
-        // Something else happened
-        setError(err.message || 'An unexpected error occurred');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -68,7 +57,11 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={8}
             />
+            {!isLogin && (
+              <small className="password-hint">Password must be at least 8 characters long</small>
+            )}
           </div>
           {error && <div className="error-message">{error}</div>}
           <button type="submit" disabled={loading} className="submit-btn">

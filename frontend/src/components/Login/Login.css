@@ -90,3 +90,11 @@
 .toggle-btn:hover {
   color: #2980b9;
 }
+
+.password-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}

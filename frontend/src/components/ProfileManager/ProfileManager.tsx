@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fingerprintAPI } from '../../services/api';
+import { fingerprintAPI, getErrorMessage } from '../../services/api';
 import './ProfileManager.css';
 
 interface FingerprintStatus {
@@ -35,13 +35,7 @@ function ProfileManager() {
       setStatus(data);
     } catch (err: any) {
       console.error('Load status error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error loading fingerprint status');
-      }
+      setError(getErrorMessage(err));
     }
   };
 
@@ -59,13 +53,7 @@ function ProfileManager() {
       await loadStatus();
     } catch (err: any) {
       console.error('Upload error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error uploading file');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -88,13 +76,7 @@ function ProfileManager() {
       await loadStatus();
     } catch (err: any) {
       console.error('Upload text error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error uploading text');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -111,13 +93,7 @@ function ProfileManager() {
       await loadStatus();
     } catch (err: any) {
       console.error('Generate fingerprint error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error generating fingerprint');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -141,13 +117,7 @@ function ProfileManager() {
       await loadStatus();
     } catch (err: any) {
       console.error('Fine-tune error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error fine-tuning fingerprint');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

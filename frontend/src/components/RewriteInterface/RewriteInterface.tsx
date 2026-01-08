@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rewriteAPI } from '../../services/api';
+import { rewriteAPI, getErrorMessage } from '../../services/api';
 import './RewriteInterface.css';
 
 function RewriteInterface() {
@@ -29,13 +29,7 @@ function RewriteInterface() {
       setRewrittenText(result.rewritten_text);
     } catch (err: any) {
       console.error('Rewrite error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error rewriting text');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { analysisAPI } from '../../services/api';
+import { analysisAPI, getErrorMessage } from '../../services/api';
 import './TextInput.css';
 
 function TextInput() {
@@ -25,13 +25,7 @@ function TextInput() {
       navigate('/analysis');
     } catch (err: any) {
       console.error('Analysis error:', err);
-      if (err.response) {
-        setError(err.response.data?.detail || `Server error: ${err.response.status}`);
-      } else if (err.request) {
-        setError('Cannot connect to server. Make sure the backend is running.');
-      } else {
-        setError(err.message || 'Error analyzing text');
-      }
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

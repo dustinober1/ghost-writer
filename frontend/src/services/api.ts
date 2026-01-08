@@ -21,6 +21,34 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Utility function to extract error message from FastAPI responses
+export const getErrorMessage = (error: any): string => {
+  if (error.response) {
+    const errorData = error.response.data;
+    
+    // Handle FastAPI validation errors (422) - detail is an array
+    if (Array.isArray(errorData?.detail)) {
+      return errorData.detail
+        .map((err: any) => {
+          const field = err.loc?.slice(1).join('.') || 'field';
+          return `${field}: ${err.msg}`;
+        })
+        .join(', ');
+    } else if (errorData?.detail) {
+      // Single error message
+      return errorData.detail;
+    } else if (errorData?.message) {
+      return errorData.message;
+    } else {
+      return `Server error: ${error.response.status}`;
+    }
+  } else if (error.request) {
+    return 'Cannot connect to server. Make sure the backend is running on http://localhost:8000';
+  } else {
+    return error.message || 'An unexpected error occurred';
+  }
+};
+
 // Handle token refresh on 401 and log errors
 api.interceptors.response.use(
   (response) => response,
