@@ -50,26 +50,58 @@ export default function ProfileManager() {
     }
   };
 
-  const handleFileUpload = useCallback(async (file: File) => {
-    if (!file) return;
+  const handleFileUpload = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    const validTypes = ['.txt', '.docx', '.pdf'];
+    const invalidFiles = fileArray.filter(file => {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      return !validTypes.includes(fileExtension);
+    });
+
+    if (invalidFiles.length > 0) {
+      showError(`Invalid file type(s): ${invalidFiles.map(f => f.name).join(', ')}. Please upload .txt, .docx, or .pdf files.`);
+      return;
+    }
+
+    const validFiles = fileArray.filter(file => {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      return validTypes.includes(fileExtension);
+    });
 
     setLoading(true);
-    try {
-      await fingerprintAPI.upload(undefined, file);
-      success('File uploaded successfully!');
-      await loadStatus();
-    } catch (err: any) {
-      console.error('Upload error:', err);
-      showError(getErrorMessage(err));
-    } finally {
-      setLoading(false);
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Upload files sequentially to avoid overwhelming the backend
+    for (const file of validFiles) {
+      try {
+        await fingerprintAPI.upload(undefined, file);
+        successCount++;
+      } catch (err: any) {
+        console.error(`Upload error for ${file.name}:`, err);
+        errorCount++;
+        showError(`Failed to upload "${file.name}": ${getErrorMessage(err)}`);
+      }
     }
+
+    if (successCount > 0) {
+      if (validFiles.length === 1) {
+        success('File uploaded successfully!');
+      } else {
+        success(`${successCount} file${successCount > 1 ? 's' : ''} uploaded successfully${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+      }
+      await loadStatus();
+    }
+
+    setLoading(false);
   }, [success, showError]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileUpload(file);
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
     }
   };
 
@@ -86,9 +118,9 @@ export default function ProfileManager() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      handleFileUpload(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileUpload(files);
     }
   }, [handleFileUpload]);
 
@@ -282,15 +314,16 @@ export default function ProfileManager() {
               >
                 <Upload className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Drag and drop a file here, or click to browse
+                  Drag and drop files here, or click to browse
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                  Supports .txt, .docx, .pdf files
+                  Supports .txt, .docx, .pdf files (multiple files supported)
                 </p>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept=".txt,.docx,.pdf"
+                  multiple
                   onChange={handleFileInputChange}
                   className="hidden"
                   id="file-upload"
@@ -302,7 +335,7 @@ export default function ProfileManager() {
                   disabled={loading}
                 >
                   <FileText className="h-4 w-4 mr-2" />
-                  Choose File
+                  {loading ? 'Uploading...' : 'Choose Files'}
                 </Button>
               </div>
             </TabsContent>

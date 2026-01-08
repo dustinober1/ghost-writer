@@ -398,7 +398,7 @@ export default function HeatMap() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">High AI (>70%)</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">High AI (&gt;70%)</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {heat_map_data.segments.filter((s) => s.ai_probability > 0.7).length}
                 </span>
@@ -410,7 +410,7 @@ export default function HeatMap() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Low AI (<40%)</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Low AI (&lt;40%)</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                   {heat_map_data.segments.filter((s) => s.ai_probability < 0.4).length}
                 </span>

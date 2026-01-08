@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, and_
+from sqlalchemy import func, desc, and_, Float
 from app.models.database import get_db, User, AnalysisResult, WritingSample, Fingerprint
 from app.models.schemas import (
     AnalyticsOverview,
@@ -183,7 +183,7 @@ def get_usage_trends(
         # Daily average AI probability
         daily_avg_prob = db.query(
             func.date(AnalysisResult.created_at).label('date'),
-            func.avg(func.cast(AnalysisResult.overall_ai_probability, db.Float)).label('avg_prob')
+            func.avg(func.cast(AnalysisResult.overall_ai_probability, Float)).label('avg_prob')
         ).filter(
             and_(
                 AnalysisResult.user_id == current_user.id,
@@ -279,11 +279,11 @@ def get_analysis_history(
         # Probability filters
         if min_probability is not None:
             query = query.filter(
-                func.cast(AnalysisResult.overall_ai_probability, db.Float) >= min_probability
+                func.cast(AnalysisResult.overall_ai_probability, Float) >= min_probability
             )
         if max_probability is not None:
             query = query.filter(
-                func.cast(AnalysisResult.overall_ai_probability, db.Float) <= max_probability
+                func.cast(AnalysisResult.overall_ai_probability, Float) <= max_probability
             )
 
         # Get total count
