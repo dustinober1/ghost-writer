@@ -42,9 +42,19 @@ class DSPyRewriter:
         Initialize DSPy rewriter.
         
         Args:
-            model: Model to use ("openai", "anthropic", or "ollama"). Defaults to OpenAI.
+            model: Model to use ("openai", "anthropic", or "ollama"). Defaults to Ollama if no API keys are found.
         """
-        self.model_name = model or os.getenv("DEFAULT_LLM_MODEL", "openai")
+        default_model = os.getenv("DEFAULT_LLM_MODEL", "ollama")
+        self.model_name = model or default_model
+        
+        # If OpenAI/Anthropic is selected but no API key, fall back to Ollama
+        if self.model_name == "openai" and not os.getenv("OPENAI_API_KEY"):
+            print("Warning: OPENAI_API_KEY not found. Falling back to Ollama.")
+            self.model_name = "ollama"
+        elif self.model_name == "anthropic" and not os.getenv("ANTHROPIC_API_KEY"):
+            print("Warning: ANTHROPIC_API_KEY not found. Falling back to Ollama.")
+            self.model_name = "ollama"
+        
         self.rewriter = None
         self.lm = None
         
@@ -77,7 +87,7 @@ class DSPyRewriter:
             elif self.model_name == "ollama":
                 # Ollama uses OpenAI-compatible API
                 ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-                ollama_model = os.getenv("OLLAMA_MODEL", "llama2")
+                ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
                 try:
                     # DSPy may not support custom base URLs directly
                     # So we'll use fallback mode for Ollama
@@ -166,12 +176,12 @@ class DSPyRewriter:
     
     def _rewrite_with_openai(self, text: str, style_guidance: str) -> str:
         """Rewrite using OpenAI API directly"""
+        import openai
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not found. Please set OPENAI_API_KEY environment variable.")
+        
         try:
-            import openai
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY not found")
-            
             client = openai.OpenAI(api_key=api_key)
             
             prompt = f"""Rewrite the following text to match this style:
@@ -193,17 +203,23 @@ Rewritten text:"""
             )
             
             return response.choices[0].message.content.strip()
+        except openai.AuthenticationError as e:
+            raise ValueError(f"OpenAI authentication failed: {str(e)}. Please check your API key.")
+        except openai.RateLimitError as e:
+            raise ValueError(f"OpenAI rate limit exceeded: {str(e)}. Please try again later.")
+        except openai.APIError as e:
+            raise ValueError(f"OpenAI API error: {str(e)}")
         except Exception as e:
-            raise Exception(f"Error with OpenAI API: {str(e)}")
+            raise ValueError(f"Error with OpenAI API: {str(e)}")
     
     def _rewrite_with_anthropic(self, text: str, style_guidance: str) -> str:
         """Rewrite using Anthropic API directly"""
+        import anthropic
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY not found. Please set ANTHROPIC_API_KEY environment variable.")
+        
         try:
-            import anthropic
-            api_key = os.getenv("ANTHROPIC_API_KEY")
-            if not api_key:
-                raise ValueError("ANTHROPIC_API_KEY not found")
-            
             client = anthropic.Anthropic(api_key=api_key)
             
             prompt = f"""Rewrite the following text to match this style:
@@ -224,46 +240,100 @@ Rewritten text:"""
             )
             
             return message.content[0].text.strip()
+        except anthropic.AuthenticationError as e:
+            raise ValueError(f"Anthropic authentication failed: {str(e)}. Please check your API key.")
+        except anthropic.RateLimitError as e:
+            raise ValueError(f"Anthropic rate limit exceeded: {str(e)}. Please try again later.")
+        except anthropic.APIError as e:
+            raise ValueError(f"Anthropic API error: {str(e)}")
         except Exception as e:
-            raise Exception(f"Error with Anthropic API: {str(e)}")
+            raise ValueError(f"Error with Anthropic API: {str(e)}")
+    
+    def _check_ollama_model(self, ollama_base_url: str, ollama_model: str) -> bool:
+        """Check if a model exists in Ollama"""
+        try:
+            import requests
+            response = requests.get(
+                f"{ollama_base_url}/api/tags",
+                timeout=10
+            )
+            response.raise_for_status()
+            models = response.json().get("models", [])
+            model_names = [model.get("name", "") for model in models]
+            # Check if exact match or model with tag exists
+            return ollama_model in model_names or any(
+                model_name.startswith(f"{ollama_model}:") or model_name == ollama_model
+                for model_name in model_names
+            )
+        except Exception:
+            # If we can't check, assume model might exist and let the API call fail
+            return None
     
     def _rewrite_with_ollama(self, text: str, style_guidance: str) -> str:
         """Rewrite using Ollama API directly"""
-        try:
-            import requests
-            ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            ollama_model = os.getenv("OLLAMA_MODEL", "llama2")
-            
-            prompt = f"""Rewrite the following text to match this style:
+        import requests
+        ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        
+        prompt = f"""Rewrite the following text to match this style:
 {style_guidance}
 
 Original text:
 {text}
 
 Rewritten text:"""
-            
-            # Ollama uses OpenAI-compatible API format
-            # Try OpenAI-compatible endpoint first
-            try:
-                import openai
-                client = openai.OpenAI(
-                    base_url=f"{ollama_base_url}/v1",
-                    api_key="ollama"  # Ollama doesn't require a real API key
-                )
-                
-                response = client.chat.completions.create(
-                    model=ollama_model,
-                    messages=[
+        
+        # Check if model exists first
+        model_exists = self._check_ollama_model(ollama_base_url, ollama_model)
+        if model_exists is False:
+            raise ValueError(
+                f"Model '{ollama_model}' not found in Ollama. "
+                f"Please pull the model first with: ollama pull {ollama_model}"
+            )
+        
+        # Use direct HTTP request to avoid OpenAI client compatibility issues
+        # Try OpenAI-compatible chat endpoint first, then fall back to legacy endpoint
+        try:
+            # Try OpenAI-compatible chat endpoint first
+            response = requests.post(
+                f"{ollama_base_url}/v1/chat/completions",
+                json={
+                    "model": ollama_model,
+                    "messages": [
                         {"role": "system", "content": "You are a writing style expert who rewrites text to match specific styles while preserving meaning."},
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.7,
-                    max_tokens=2000
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                    "stream": False
+                },
+                timeout=120
+            )
+            
+            if response.status_code == 404:
+                # Model not found, try legacy endpoint
+                raise requests.exceptions.HTTPError("404 Model not found", response=response)
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            # Check if we got a valid response
+            if "choices" in result and len(result["choices"]) > 0:
+                return result["choices"][0]["message"]["content"].strip()
+            elif "message" in result and "content" in result["message"]:
+                return result["message"]["content"].strip()
+            else:
+                # Unexpected response format, fall back to legacy endpoint
+                raise ValueError("Unexpected response format")
+        except requests.exceptions.HTTPError as e:
+            if e.response and e.response.status_code == 404:
+                # Model not found, provide helpful error
+                raise ValueError(
+                    f"Model '{ollama_model}' not found in Ollama at {ollama_base_url}. "
+                    f"Please ensure the model is pulled: ollama pull {ollama_model}"
                 )
-                
-                return response.choices[0].message.content.strip()
-            except ImportError:
-                # Fallback to direct HTTP request
+            # Try legacy /api/generate endpoint as fallback
+            try:
                 response = requests.post(
                     f"{ollama_base_url}/api/generate",
                     json={
@@ -277,11 +347,69 @@ Rewritten text:"""
                     },
                     timeout=120
                 )
+                
+                if response.status_code == 404:
+                    raise ValueError(
+                        f"Model '{ollama_model}' not found in Ollama at {ollama_base_url}. "
+                        f"Please ensure the model is pulled: ollama pull {ollama_model}"
+                    )
+                
                 response.raise_for_status()
                 return response.json()["response"].strip()
-                
+            except requests.exceptions.HTTPError as fallback_http_error:
+                if fallback_http_error.response and fallback_http_error.response.status_code == 404:
+                    raise ValueError(
+                        f"Model '{ollama_model}' not found in Ollama at {ollama_base_url}. "
+                        f"Please ensure the model is pulled: ollama pull {ollama_model}"
+                    )
+                raise ValueError(f"Error with Ollama API: {str(fallback_http_error)}")
+            except requests.exceptions.ConnectionError:
+                raise ValueError(
+                    f"Cannot connect to Ollama at {ollama_base_url}. "
+                    "Please ensure Ollama is running. You can start it with: ollama serve"
+                )
+            except requests.exceptions.Timeout:
+                raise ValueError(
+                    f"Ollama request timed out after 120 seconds. "
+                    f"The server at {ollama_base_url} may be too slow or unavailable."
+                )
+            except ValueError as ve:
+                # Re-raise ValueError as-is
+                raise ve
+            except Exception as fallback_error:
+                raise ValueError(f"Error with Ollama API: {str(fallback_error)}")
+        except requests.exceptions.ConnectionError:
+            raise ValueError(
+                f"Cannot connect to Ollama at {ollama_base_url}. "
+                "Please ensure Ollama is running. You can start it with: ollama serve"
+            )
+        except requests.exceptions.Timeout:
+            raise ValueError(
+                f"Ollama request timed out after 120 seconds. "
+                f"The server at {ollama_base_url} may be too slow or unavailable."
+            )
+        except ValueError as ve:
+            # Re-raise ValueError as-is
+            raise ve
         except Exception as e:
-            raise Exception(f"Error with Ollama API: {str(e)}. Make sure Ollama is running on {ollama_base_url}")
+            error_msg = str(e)
+            if "404" in error_msg or "not found" in error_msg.lower():
+                raise ValueError(
+                    f"Model '{ollama_model}' not found in Ollama at {ollama_base_url}. "
+                    f"Please ensure the model is pulled: ollama pull {ollama_model}"
+                )
+            elif "Connection" in error_msg or "refused" in error_msg.lower() or "connect" in error_msg.lower():
+                raise ValueError(
+                    f"Cannot connect to Ollama at {ollama_base_url}. "
+                    "Please ensure Ollama is running. You can start it with: ollama serve"
+                )
+            elif "timeout" in error_msg.lower():
+                raise ValueError(
+                    f"Ollama request timed out. "
+                    f"The server at {ollama_base_url} may be too slow or unavailable."
+                )
+            else:
+                raise ValueError(f"Error with Ollama API: {error_msg}")
     
     def rewrite_with_fingerprint(
         self,

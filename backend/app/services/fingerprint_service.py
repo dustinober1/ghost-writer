@@ -178,7 +178,7 @@ class FingerprintService:
         
         return {
             "has_fingerprint": fingerprint is not None,
-            "fingerprint": FingerprintResponse.from_orm(fingerprint) if fingerprint else None,
+            "fingerprint": FingerprintResponse.model_validate(fingerprint) if fingerprint else None,
             "sample_count": len(samples)
         }
 

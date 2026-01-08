@@ -6,6 +6,9 @@ from app.services.fingerprint_service import get_fingerprint_service
 from app.ml.dspy_rewriter import get_dspy_rewriter
 from app.utils.auth import get_current_user
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/rewrite", tags=["rewrite"])
 
@@ -62,11 +65,13 @@ def rewrite_text(
         )
     
     except ValueError as e:
+        logger.error(f"ValueError in rewrite endpoint: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
+        logger.error(f"Exception in rewrite endpoint: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error rewriting text: {str(e)}"

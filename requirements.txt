@@ -1,0 +1,12 @@
+#
+# Root requirements file for the Ghostwriter project.
+#
+# This simply delegates to the backend's requirements, which already
+# include FastAPI, PostgreSQL, ML, and other shared dependencies.
+#
+# Usage:
+#   pip install -r requirements.txt
+#
+
+-r backend/requirements.txt
+

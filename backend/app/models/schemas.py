@@ -41,7 +41,7 @@ class WritingSampleResponse(WritingSampleBase):
 
 # Fingerprint Schemas
 class FingerprintBase(BaseModel):
-    feature_vector: Dict
+    feature_vector: List[float]
     model_version: str
     
     class Config:
