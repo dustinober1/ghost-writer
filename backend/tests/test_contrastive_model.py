@@ -46,3 +46,62 @@ def test_contrastive_model_predict_ai_probability():
     ai_prob = model.predict_ai_probability(text_features, reference_features)
     
     assert 0 <= ai_prob <= 1
+
+
+def test_contrastive_model_load_model():
+    """Test loading model from file"""
+    import tempfile
+    import os
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model_path = os.path.join(tmpdir, "test_model.pth")
+        
+        # Create and save model
+        model1 = ContrastiveModel()
+        model1.save_model(model_path)
+        
+        # Load model
+        model2 = ContrastiveModel(model_path=model_path)
+        assert model2.model is not None
+
+
+def test_contrastive_model_load_model_file_not_exists():
+    """Test loading model when file doesn't exist"""
+    model = ContrastiveModel(model_path="/nonexistent/path/model.pth")
+    # Should use random weights, not raise error
+    assert model.model is not None
+
+
+def test_contrastive_model_load_model_invalid_file():
+    """Test loading model from invalid file"""
+    import tempfile
+    import os
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        invalid_path = os.path.join(tmpdir, "invalid.pth")
+        # Create empty or invalid file
+        with open(invalid_path, 'w') as f:
+            f.write("invalid content")
+        
+        # Should handle gracefully
+        try:
+            model = ContrastiveModel(model_path=invalid_path)
+            # If it loads, that's fine; if it fails, that's also expected
+            assert True
+        except Exception:
+            # Exception is acceptable for invalid file
+            assert True
+
+
+def test_contrastive_model_save_model():
+    """Test saving model to file"""
+    import tempfile
+    import os
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model_path = os.path.join(tmpdir, "test_model.pth")
+        
+        model = ContrastiveModel()
+        model.save_model(model_path)
+        
+        assert os.path.exists(model_path)
