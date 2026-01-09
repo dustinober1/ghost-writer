@@ -1,58 +1,64 @@
 #!/bin/bash
 
-# Restart Container Script
-# This script performs a complete clean rebuild of all Docker containers and images
+# Improved Container Restart Script
+# This script efficiently rebuilds only changed services using Docker cache
 
-set -e  # Exit on any error
-
-echo "🚀 Starting complete container restart..."
-echo ""
+set -e
 
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Parse command line arguments
-REMOVE_VOLUMES=false
-REMOVE_IMAGES=false
+REBUILD_ALL=false
+REBUILD_BACKEND=false
+REBUILD_FRONTEND=false
 FORCE=false
+QUIET=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -v|--volumes)
-            REMOVE_VOLUMES=true
+        -b|--backend)
+            REBUILD_BACKEND=true
             shift
             ;;
-        -i|--images)
-            REMOVE_IMAGES=true
+        -f|--frontend)
+            REBUILD_FRONTEND=true
             shift
             ;;
         -a|--all)
-            REMOVE_VOLUMES=true
-            REMOVE_IMAGES=true
+            REBUILD_ALL=true
             shift
             ;;
-        -f|--force)
+        -y|--yes)
             FORCE=true
+            shift
+            ;;
+        -q|--quiet)
+            QUIET=true
             shift
             ;;
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
+            echo "Efficiently restart containers, only rebuilding changed services using Docker cache."
+            echo ""
             echo "Options:"
-            echo "  -v, --volumes    Remove volumes (database data will be lost!)"
-            echo "  -i, --images     Remove images (full rebuild from Dockerfiles)"
-            echo "  -a, --all        Remove volumes AND images (most aggressive)"
-            echo "  -f, --force      Skip confirmation prompts"
-            echo "  -h, --help       Show this help message"
+            echo "  -b, --backend      Force rebuild backend service"
+            echo "  -f, --frontend     Force rebuild frontend service"
+            echo "  -a, --all          Force rebuild all services (ignores cache)"
+            echo "  -y, --yes          Skip confirmation prompts"
+            echo "  -q, --quiet         Suppress verbose output"
+            echo "  -h, --help         Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0                # Quick restart (keeps volumes and images)"
-            echo "  $0 -v             # Remove volumes (database will be reset)"
-            echo "  $0 -i             # Remove images (full rebuild)"
-            echo "  $0 -a             # Complete clean (removes everything)"
+            echo "  $0                  # Smart rebuild (only changed services)"
+            echo "  $0 -b              # Rebuild backend"
+            echo "  $0 -f              # Rebuild frontend"
+            echo "  $0 -a              # Rebuild everything (no cache)"
             exit 0
             ;;
         *)
@@ -63,97 +69,145 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Confirmation prompt (unless --force)
-if [ "$FORCE" = false ]; then
-    if [ "$REMOVE_VOLUMES" = true ] || [ "$REMOVE_IMAGES" = true ]; then
-        echo -e "${YELLOW}⚠️  WARNING: This will remove Docker resources!${NC}"
-        if [ "$REMOVE_VOLUMES" = true ]; then
-            echo -e "${RED}   - Volumes will be removed (database data will be lost!)${NC}"
+# Function to check if files changed
+check_files_changed() {
+    local service=$1
+    local last_modified_file=".docker_${service}_last_modified"
+    
+    if [ ! -f "$last_modified_file" ]; then
+        touch "$last_modified_file"
+        return 0  # First run, assume changed
+    fi
+    
+    local last_modified=$(cat "$last_modified_file")
+    
+    if [ "$service" = "backend" ]; then
+        # Check if backend files changed
+        find backend/app backend/requirements.txt backend/Dockerfile -newer "$last_modified_file" 2>/dev/null | grep -q . && return 0
+    elif [ "$service" = "frontend" ]; then
+        # Check if frontend files changed
+        find frontend/src frontend/package.json frontend/Dockerfile frontend/vite.config.ts -newer "$last_modified_file" 2>/dev/null | grep -q . && return 0
+    fi
+    
+    return 1  # No changes detected
+}
+
+# Step 1: Check what changed
+if [ "$REBUILD_ALL" = false ]; then
+    [ "$QUIET" = false ] && echo -e "${BLUE}🔍 Step 1: Checking for changed files...${NC}"
+    
+    backend_changed=false
+    frontend_changed=false
+    
+    if [ "$REBUILD_BACKEND" = true ] || check_files_changed "backend"; then
+        backend_changed=true
+    fi
+    
+    if [ "$REBUILD_FRONTEND" = true ] || check_files_changed "frontend"; then
+        frontend_changed=true
+    fi
+    
+    [ "$QUIET" = false ] && echo ""
+else
+    [ "$QUIET" = false ] && echo -e "${YELLOW}⚠️  Force rebuild all services (--all)${NC}"
+    backend_changed=true
+    frontend_changed=true
+fi
+
+# Step 2: Stop containers
+[ "$QUIET" = false ] && echo -e "${GREEN}📦 Step 2: Stopping containers...${NC}"
+docker-compose down
+
+# Step 3: Clean up (optional, with cache preservation)
+if [ "$backend_changed" = false ] && [ "$frontend_changed" = false ]; then
+    [ "$QUIET" = false ] && echo -e "${YELLOW}ℹ️  No changes detected - starting existing containers...${NC}"
+fi
+
+# Step 4: Rebuild changed services (with cache)
+if [ "$backend_changed" = true ] || [ "$frontend_changed" = true ] || [ "$REBUILD_ALL" = true ]; then
+    [ "$QUIET" = false ] && echo -e "${GREEN}🔨 Step 3: Rebuilding services (using Docker cache)...${NC}"
+    
+    if [ "$REBUILD_ALL" = true ]; then
+        # Full rebuild without cache
+        docker-compose build --no-cache
+    else
+        # Smart rebuild - only changed services use cache
+        build_flags=""
+        
+        if [ "$backend_changed" = true ] && [ "$frontend_changed" = false ]; then
+            build_flags="backend"
+        elif [ "$backend_changed" = false ] && [ "$frontend_changed" = true ]; then
+            build_flags="frontend"
+        else
+            # Both changed, rebuild all but with cache
+            build_flags=""
         fi
-        if [ "$REMOVE_IMAGES" = true ]; then
-            echo -e "${RED}   - Images will be removed (full rebuild required)${NC}"
+        
+        if [ -n "$build_flags" ]; then
+            docker-compose build $build_flags
+        else
+            docker-compose build
         fi
-        echo ""
-        read -p "Are you sure you want to continue? (yes/no): " confirm
-        if [ "$confirm" != "yes" ]; then
-            echo "Aborted."
-            exit 1
-        fi
+    fi
+    
+    # Update modification timestamps
+    if [ "$backend_changed" = true ]; then
+        touch .docker_backend_last_modified
+    fi
+    if [ "$frontend_changed" = true ]; then
+        touch .docker_frontend_last_modified
     fi
 fi
 
-# Step 1: Stop and remove containers
-echo -e "${GREEN}📦 Step 1: Stopping and removing containers...${NC}"
-docker-compose down --remove-orphans
-echo ""
-
-# Step 2: Remove volumes (if requested)
-if [ "$REMOVE_VOLUMES" = true ]; then
-    echo -e "${GREEN}🗑️  Step 2: Removing volumes...${NC}"
-    docker-compose down -v
-    echo "Volumes removed."
-    echo ""
-else
-    echo -e "${YELLOW}📦 Step 2: Keeping volumes (database data preserved)${NC}"
-    echo ""
-fi
-
-# Step 3: Remove images (if requested)
-if [ "$REMOVE_IMAGES" = true ]; then
-    echo -e "${GREEN}🖼️  Step 3: Removing images...${NC}"
-    
-    # Get image names from docker-compose
-    IMAGES=$(docker-compose config --images 2>/dev/null || echo "")
-    
-    if [ -n "$IMAGES" ]; then
-        echo "Removing project images..."
-        echo "$IMAGES" | xargs -r docker rmi -f 2>/dev/null || true
-    fi
-    
-    echo "Images removed."
-    echo ""
-else
-    echo -e "${YELLOW}🖼️  Step 3: Keeping images (will use cached layers if available)${NC}"
-    echo ""
-fi
-
-# Step 4: Clean up unused Docker resources
-echo -e "${GREEN}🧹 Step 4: Cleaning up unused Docker resources...${NC}"
-docker system prune -f
-echo ""
-
-# Step 5: Rebuild images
-echo -e "${GREEN}🔨 Step 5: Rebuilding images...${NC}"
-docker-compose build --no-cache
-echo ""
-
-# Step 6: Start containers
-echo -e "${GREEN}🚀 Step 6: Starting containers...${NC}"
+# Step 5: Start containers
+[ "$QUIET" = false ] && echo -e "${GREEN}🚀 Step 4: Starting containers...${NC}"
 docker-compose up -d
-echo ""
 
-# Step 7: Show status
-echo -e "${GREEN}✅ Containers restarted!${NC}"
-echo ""
-echo "Container status:"
+# Wait for services to be healthy
+[ "$QUIET" = false ] && echo -e "${BLUE}⏳ Step 5: Waiting for services to be healthy...${NC}"
+
+# Simple health check loop
+max_attempts=30
+attempt=0
+healthy_count=0
+
+while [ $attempt -lt $max_attempts ]; do
+    backend_status=$(docker-compose ps -q backend 2>/dev/null || echo "not found")
+    frontend_status=$(docker-compose ps -q frontend 2>/dev/null || echo "not found")
+    
+    if [[ "$backend_status" == *"healthy"* ]] || [[ "$backend_status" == *"Up"* ]]; then
+        ((healthy_count++))
+    fi
+    
+    if [[ "$frontend_status" == *"healthy"* ]] || [[ "$frontend_status" == *"Up"* ]]; then
+        ((healthy_count++))
+    fi
+    
+    if [ $healthy_count -ge 2 ]; then
+        [ "$QUIET" = false ] && echo -e "${GREEN}✅ All services healthy!${NC}"
+        break
+    fi
+    
+    sleep 1
+    ((attempt++))
+done
+
+if [ $attempt -ge $max_attempts ]; then
+    [ "$QUIET" = false ] && echo -e "${YELLOW}⚠️  Services started but health check timed out${NC}"
+    [ "$QUIET" = false ] && echo -e "${YELLOW}ℹ️  Check container status with: docker-compose ps${NC}"
+fi
+
+# Show summary
+[ "$QUIET" = false ] && echo ""
+[ "$QUIET" = false ] && echo -e "${GREEN}✨ Done!${NC}"
+[ "$QUIET" = false ] && echo ""
+[ "$QUIET" = false ] && echo "Container status:"
 docker-compose ps
-echo ""
-
-# Step 8: Show logs (tail)
-echo -e "${GREEN}📋 Recent logs (last 20 lines):${NC}"
-docker-compose logs --tail=20
-echo ""
-
-echo -e "${GREEN}✨ Done!${NC}"
-echo ""
-echo "Next steps:"
-echo "  1. Initialize database: docker-compose exec backend alembic upgrade head"
-echo "  2. Create demo user: docker-compose exec backend python scripts/seed_default_user.py"
-echo "  3. View logs: docker-compose logs -f"
-echo "  4. Stop containers: docker-compose down"
-echo ""
-echo "Services available at:"
-echo "  - Frontend: http://localhost:3000"
-echo "  - Backend API: http://localhost:8000"
-echo "  - API Docs: http://localhost:8000/docs"
-echo ""
+[ "$QUIET" = false ] && echo ""
+[ "$QUIET" = false ] && echo "Services available at:"
+[ "$QUIET" = false ] && echo "  - Frontend: http://localhost:3000"
+[ "$QUIET" = false ] && echo "  - Backend API: http://localhost:8000"
+[ "$QUIET" = false ] && echo "  - API Docs: http://localhost:8000/docs"
+[ "$QUIET" = false ] && echo ""
+[ "$QUIET" = false ] && echo "View logs: docker-compose logs -f"
+[ "$QUIET" = false ] && echo "Stop containers: docker-compose down"
