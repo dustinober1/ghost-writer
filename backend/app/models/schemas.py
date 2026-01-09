@@ -80,7 +80,6 @@ class HeatMapData(BaseModel):
 class AnalysisRequest(BaseModel):
     text: str
     granularity: str = "sentence"  # "sentence" or "paragraph"
-    embedder: Optional[str] = "stylometric"  # "stylometric" or "ollama"
 
 
 class AnalysisResponse(BaseModel):

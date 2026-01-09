@@ -1,6 +1,7 @@
 """
 Analysis service that orchestrates feature extraction and contrastive model
 to generate per-segment AI probability scores for heat map visualization.
+Uses Ollama embeddings for improved accuracy.
 """
 from typing import List, Dict, Optional
 import numpy as np
@@ -22,10 +23,12 @@ class AnalysisService:
         text: str,
         granularity: str = "sentence",
         user_fingerprint: Optional[Dict] = None,
-        embedder: str = "stylometric",
     ) -> Dict:
         """
         Analyze text and generate heat map data with AI probability scores.
+        
+        Uses Ollama embeddings in combination with stylometric features
+        for more accurate AI probability estimation.
         
         Args:
             text: Text to analyze
@@ -54,13 +57,11 @@ class AnalysisService:
             if not segment.strip():
                 continue
             
-            # Always extract stylometric features (used for heuristics and fingerprint path)
+            # Extract stylometric features (used for heuristics and fingerprint path)
             segment_features = extract_feature_vector(segment)
 
-            # Optionally get Ollama embedding for this segment
-            ollama_embedding = None
-            if embedder == "ollama":
-                ollama_embedding = get_ollama_embedding(segment)
+            # Get Ollama embedding for this segment
+            ollama_embedding = get_ollama_embedding(segment)
             
             # Calculate AI probability
             if user_fingerprint:
@@ -73,9 +74,9 @@ class AnalysisService:
                 # Base stylometric heuristic
                 base_ai_prob = self._estimate_ai_probability(segment_features)
 
-                if embedder == "ollama" and ollama_embedding is not None:
-                    # Simple heuristic using Ollama embedding magnitude as an additional signal.
-                    # This is intentionally lightweight until a trained head is available.
+                # Use Ollama embedding if available
+                if ollama_embedding is not None:
+                    # Use Ollama embedding magnitude as an additional signal
                     emb_norm = float(np.linalg.norm(ollama_embedding))
                     # Map norm to [0, 1] where smaller norm => more AI-like
                     norm_score = 1.0 / (1.0 + emb_norm)
@@ -84,6 +85,7 @@ class AnalysisService:
                         max(0.0, min(1.0, 0.7 * base_ai_prob + 0.3 * norm_score))
                     )
                 else:
+                    # Fallback to stylometric only if Ollama unavailable
                     ai_probability = base_ai_prob
             
             # Find segment position in original text

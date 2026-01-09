@@ -1,2 +1,2 @@
 # ML module for Ghostwriter
-# Supports multiple LLM backends: OpenAI, Anthropic, and Ollama (local)
+# Uses Ollama local LLM for text analysis and rewriting

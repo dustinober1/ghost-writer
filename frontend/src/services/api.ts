@@ -107,10 +107,9 @@ export const authAPI = {
 export const analysisAPI = {
   analyze: async (
     text: string,
-    granularity: 'sentence' | 'paragraph' = 'sentence',
-    embedder: 'stylometric' | 'ollama' = 'stylometric'
+    granularity: 'sentence' | 'paragraph' = 'sentence'
   ) => {
-    const response = await api.post('/api/analysis/analyze', { text, granularity, embedder });
+    const response = await api.post('/api/analysis/analyze', { text, granularity });
     return response.data;
   },
 };

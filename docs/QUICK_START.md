@@ -64,10 +64,10 @@ cp .env.template .env
 
 - **Database URL** (if not using Docker defaults)
 - **SECRET_KEY** (generate a random string)
-- **LLM Provider** (choose one):
-  - **Ollama** (free, local): Set `DEFAULT_LLM_MODEL=ollama` and `OLLAMA_MODEL=llama2`
-  - **OpenAI**: Set `OPENAI_API_KEY=your-key`
-  - **Anthropic**: Set `ANTHROPIC_API_KEY=your-key`
+- **Ollama Configuration** (required for text analysis and rewriting):
+  - `OLLAMA_BASE_URL=http://localhost:11434` (or your Ollama server URL)
+  - `OLLAMA_MODEL=llama3.1:8b` (or your preferred model)
+- See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for detailed Ollama setup instructions
 
 ### 3. Generate a Secret Key:
 

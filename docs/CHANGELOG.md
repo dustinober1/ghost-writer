@@ -2,27 +2,30 @@
 
 ## [Unreleased]
 
+### Changed
+- **Ollama-Only Architecture**: Removed OpenAI and Anthropic support
+  - Now uses Ollama for all text analysis and rewriting
+  - Removed `openai` and `anthropic` package dependencies
+  - Removed OpenAI/Anthropic API key configuration from Docker files
+  - Simplified rewriter to use only Ollama
+  - Updated perplexity calculation to use Ollama API with fallback to heuristic
+  - Removed embedder selection UI (always uses Ollama embeddings)
+  - Updated all documentation to reflect Ollama-only setup
+
 ### Added
-- **Ollama Support**: Added local LLM support via Ollama for free, private style rewriting
-  - Supports OpenAI-compatible API format
-  - Works with any Ollama model (llama2, mistral, phi, etc.)
-  - No API keys required
+- **Ollama Integration**:
+  - Supports Ollama for text embeddings and style rewriting
+  - Works with any Ollama model (llama3.1:8b, mistral, phi, etc.)
+  - No API keys required for Ollama
   - Complete privacy (data never leaves your machine)
   - See `docs/OLLAMA_SETUP.md` for setup instructions
 
-### Changed
-- Updated `dspy_rewriter.py` to support three LLM backends:
-  - OpenAI (cloud, requires API key)
-  - Anthropic (cloud, requires API key)
-  - Ollama (local, free, no API key)
-- Model selection now configurable via `DEFAULT_LLM_MODEL` environment variable
-- Improved error handling for Ollama connection issues
-
 ### Documentation
 - Added `docs/OLLAMA_SETUP.md` with comprehensive setup guide
-- Updated `README.md` to mention Ollama
-- Updated `docs/QUICK_START.md` with Ollama configuration
-- Updated `docs/NEXT_STEPS.md` with Ollama options
+- Updated `README.md` to mention Ollama as the LLM provider
+- Updated `docs/QUICK_START.md` with Ollama configuration instructions
+- Updated `docs/NEXT_STEPS.md` with simplified Ollama-only setup
+- Updated `docs/DOCKER_SETUP.md` to remove OpenAI/Anthropic env vars
 
 ## [Initial Release]
 

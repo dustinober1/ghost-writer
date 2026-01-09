@@ -4,10 +4,7 @@
 
 Create a `.env` file in the `backend/` directory:
 
-**Note:** For style rewriting, you can use:
-- **Ollama** (recommended for free local LLM) - See `docs/OLLAMA_SETUP.md`
-- **OpenAI** (requires API key)
-- **Anthropic** (requires API key)
+**Note:** Style rewriting uses Ollama local LLM. See `docs/OLLAMA_SETUP.md` for setup instructions.
 
 ```bash
 cd backend
@@ -16,14 +13,11 @@ DATABASE_URL=postgresql://ghostwriter:ghostwriter_password@localhost:5432/ghostw
 SECRET_KEY=your-secret-key-change-this-in-production-use-a-random-string
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
-OPENAI_API_KEY=your-openai-api-key-here
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
 
-# Ollama Configuration (for local LLM - free alternative)
+# Ollama Configuration (required for text analysis and rewriting)
 # See docs/OLLAMA_SETUP.md for setup instructions
-DEFAULT_LLM_MODEL=ollama  # Options: openai, anthropic, ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama2
+OLLAMA_MODEL=llama3.1:8b
 
 ENVIRONMENT=development
 EOF

@@ -90,22 +90,27 @@ ollama run llama2 "Hello, how are you?"
 
 ## Using Ollama in Ghostwriter
 
-### Option 1: Set as Default
+Ghostwriter now uses Ollama as the only provider for text embeddings and style rewriting. No API keys are required.
 
-Set `DEFAULT_LLM_MODEL=ollama` in your `.env` file. All rewriting will use Ollama.
+### Configuration
 
-### Option 2: Use via API
+Set the following environment variables in your `.env` file:
 
-The rewrite endpoint will automatically use Ollama if:
-- `DEFAULT_LLM_MODEL=ollama` is set, OR
-- You configure it programmatically
+```bash
+OLLAMA_BASE_URL=http://localhost:11434  # Or your Ollama server URL
+OLLAMA_MODEL=llama3.1:8b  # Or your preferred model
+```
 
-### Option 3: Switch Models
+### Model Selection
 
-You can switch between models by changing `DEFAULT_LLM_MODEL`:
-- `ollama` - Use local Ollama
-- `openai` - Use OpenAI API
-- `anthropic` - Use Anthropic API
+You can switch between different Ollama models by changing `OLLAMA_MODEL`:
+- `llama3.1:8b` - Balanced performance (default)
+- `llama2:13b` - Higher quality (slower)
+- `mistral` - Good performance/quality balance
+- `phi` - Fast but lower quality
+- Plus any other model you have pulled
+
+See [Ollama Model Library](https://ollama.com/library) for more options.
 
 ## Performance Tips
 

@@ -18,7 +18,6 @@ export default function TextInput() {
   const [error, setError] = useState('');
   const [granularity, setGranularity] = useState<'sentence' | 'paragraph'>('sentence');
   const [analysisMode, setAnalysisMode] = useState<'standard' | 'detailed' | 'quick'>('standard');
-  const [embedder, setEmbedder] = useState<'stylometric' | 'ollama'>('stylometric');
   const [isDragging, setIsDragging] = useState(false);
   const [uploadedFileNames, setUploadedFileNames] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
@@ -62,7 +61,7 @@ export default function TextInput() {
     }, 20000); // 20s
 
     try {
-      const result = await analysisAPI.analyze(text, granularity, embedder);
+      const result = await analysisAPI.analyze(text, granularity);
       clearInterval(progressInterval);
       clearTimeout(helpTimeout);
       setAnalysisProgress(100);
@@ -358,41 +357,6 @@ export default function TextInput() {
                       <TabsTrigger value="paragraph">Paragraph-level</TabsTrigger>
                     </TabsList>
                   </Tabs>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Embedder
-                  </p>
-                  <div className="inline-flex h-10 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 p-1">
-                    <button
-                      type="button"
-                      onClick={() => setEmbedder('stylometric')}
-                      className={cn(
-                        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                        embedder === 'stylometric'
-                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                      )}
-                    >
-                      Stylometric (built-in)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEmbedder('ollama')}
-                      className={cn(
-                        'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                        embedder === 'ollama'
-                          ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                      )}
-                    >
-                      Ollama embeddings
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                    Ollama requires the backend to be configured with a local Ollama server and embedding model.
-                  </p>
                 </div>
               </div>
 

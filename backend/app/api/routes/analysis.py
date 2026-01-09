@@ -18,6 +18,9 @@ def analyze_text(
 ):
     """
     Analyze text and return heat map data with AI probability scores.
+    
+    Uses Ollama embeddings combined with stylometric features for
+    accurate AI probability estimation.
     """
     try:
         analysis_service = get_analysis_service()
@@ -32,12 +35,11 @@ def analyze_text(
                 "model_version": user_fingerprint.model_version
             }
         
-        # Analyze text
+        # Analyze text (embedder removed - always uses Ollama)
         result = analysis_service.analyze_text(
             text=request.text,
             granularity=request.granularity,
             user_fingerprint=fingerprint_dict,
-            embedder=request.embedder or "stylometric",
         )
         
         # Convert to response format

@@ -20,7 +20,7 @@ def rewrite_text(
     db: Session = Depends(get_db)
 ):
     """
-    Rewrite text to match user's style using DSPy-optimized LLM.
+    Rewrite text to match user's style using Ollama.
     """
     try:
         rewriter = get_dspy_rewriter()
@@ -84,7 +84,7 @@ def get_rewrite_history(
     db: Session = Depends(get_db)
 ):
     """
-    Get rewriting history for the current user.
+    Get rewriting history for current user.
     (Placeholder - would need a RewriteHistory table in full implementation)
     """
     # This would query a RewriteHistory table in a full implementation

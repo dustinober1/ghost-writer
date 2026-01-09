@@ -46,11 +46,9 @@ POSTGRES_DB=ghostwriter
 
 # Backend
 SECRET_KEY=your-secret-key-here
-OPENAI_API_KEY=your-key-here
-ANTHROPIC_API_KEY=your-key-here
-DEFAULT_LLM_MODEL=ollama
+# Ollama Configuration (required for text analysis and rewriting)
 OLLAMA_BASE_URL=http://host.docker.internal:11434
-OLLAMA_MODEL=llama2
+OLLAMA_MODEL=llama3.1:8b
 ```
 
 ### 2. Start All Services

@@ -14,20 +14,16 @@ passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 
 # ML and Data Science
-torch==2.1.0
-transformers==4.35.0
 numpy==1.24.3
 pandas==2.1.3
 scikit-learn==1.3.2
 nltk==3.8.1
 spacy==3.7.2
 
-# DSPy
+# DSPy (for LLM orchestration)
 dspy-ai==2.3.5
 
-# Cloud LLM APIs
-openai==1.3.5
-anthropic==0.7.7
+# Ollama (local LLM)
 requests==2.31.0  # For Ollama HTTP requests
 
 # Utilities
