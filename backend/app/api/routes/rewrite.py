@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from app.models.database import get_db, User
 from app.models.schemas import RewriteRequest, RewriteResponse
 from app.services.fingerprint_service import get_fingerprint_service
 from app.ml.dspy_rewriter import get_dspy_rewriter
 from app.utils.auth import get_current_user
+from app.middleware.rate_limit import rewrite_rate_limit
+from app.middleware.input_sanitization import sanitize_text
+from app.utils.file_validation import validate_text_length
 from datetime import datetime
 import logging
 
@@ -14,8 +17,10 @@ router = APIRouter(prefix="/api/rewrite", tags=["rewrite"])
 
 
 @router.post("/rewrite", response_model=RewriteResponse)
+@rewrite_rate_limit
 def rewrite_text(
     request: RewriteRequest,
+    req: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -23,15 +28,19 @@ def rewrite_text(
     Rewrite text to match user's style using Ollama.
     """
     try:
+        # Validate and sanitize input
+        validate_text_length(request.text)
+        sanitized_text = sanitize_text(request.text)
+        
         rewriter = get_dspy_rewriter()
         fingerprint_service = get_fingerprint_service()
         
         # Generate style guidance
         if request.target_style:
             # Use provided style guidance
-            style_guidance = request.target_style
+            style_guidance = sanitize_text(request.target_style)
             rewritten_text = rewriter.rewrite_text(
-                text=request.text,
+                text=sanitized_text,
                 style_guidance=style_guidance
             )
         else:
@@ -51,14 +60,17 @@ def rewrite_text(
             
             # Use fingerprint to generate style guidance
             rewritten_text = rewriter.rewrite_with_fingerprint(
-                text=request.text,
+                text=sanitized_text,
                 fingerprint=fingerprint_dict
             )
+        
+        # Sanitize output
+        rewritten_text = sanitize_text(rewritten_text)
         
         # For now, we'll just return the result
         # In a full implementation, you might want to save rewrite history
         return RewriteResponse(
-            original_text=request.text,
+            original_text=sanitized_text,
             rewritten_text=rewritten_text,
             rewrite_id=0,  # Would be from database in full implementation
             created_at=datetime.utcnow()

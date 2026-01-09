@@ -14,6 +14,8 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    email_verified: bool
+    is_active: bool
     created_at: datetime
 
     class Config:
@@ -104,11 +106,34 @@ class RewriteResponse(BaseModel):
 # Auth Schemas
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=1000)
+
+
+class EmailVerificationRequest(BaseModel):
+    token: str
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=1000)
 
 
 # Analytics Schemas

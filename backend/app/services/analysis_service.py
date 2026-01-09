@@ -10,6 +10,10 @@ from app.ml.contrastive_model import get_contrastive_model
 from app.ml.fingerprint import compare_to_fingerprint
 from app.ml.ollama_embeddings import get_ollama_embedding
 from app.utils.text_processing import split_into_sentences, split_into_paragraphs
+from app.utils.cache import (
+    text_hash, get_cached_analysis, cache_analysis_result,
+    get_cached_features, cache_features
+)
 
 
 class AnalysisService:
@@ -23,6 +27,8 @@ class AnalysisService:
         text: str,
         granularity: str = "sentence",
         user_fingerprint: Optional[Dict] = None,
+        user_id: int = None,
+        use_cache: bool = True,
     ) -> Dict:
         """
         Analyze text and generate heat map data with AI probability scores.
@@ -34,12 +40,21 @@ class AnalysisService:
             text: Text to analyze
             granularity: "sentence" or "paragraph"
             user_fingerprint: Optional user fingerprint for comparison
+            user_id: Optional user ID for cache key
+            use_cache: Whether to use caching (default: True)
         
         Returns:
             Dictionary with heat map data and overall AI probability
         """
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
+        
+        # Check cache first
+        if use_cache:
+            cache_key = text_hash(text + granularity)
+            cached = get_cached_analysis(cache_key, user_id)
+            if cached:
+                return cached
         
         # Split text into segments
         if granularity == "sentence":
@@ -108,11 +123,17 @@ class AnalysisService:
         else:
             overall_ai_probability = 0.5  # Default neutral
         
-        return {
+        result = {
             "segments": segment_results,
             "overall_ai_probability": float(overall_ai_probability),
             "granularity": granularity
         }
+        
+        # Cache the result
+        if use_cache:
+            cache_analysis_result(cache_key, result, user_id)
+        
+        return result
     
     def _estimate_ai_probability(self, features: np.ndarray) -> float:
         """

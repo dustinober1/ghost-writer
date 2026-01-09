@@ -1,9 +1,10 @@
 import numpy as np
 import nltk
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import Counter
 import re
 import requests
+import math
 from app.utils.text_processing import split_into_sentences, split_into_paragraphs
 
 # Download NLTK data if needed
@@ -243,6 +244,212 @@ def extract_semantic_features(text: str) -> Dict[str, float]:
     }
 
 
+def extract_ngram_features(text: str, n_values: List[int] = [2, 3]) -> Dict[str, float]:
+    """
+    Extract n-gram features for better stylometric analysis.
+    
+    Args:
+        text: Input text
+        n_values: List of n values for n-grams (default: bigrams and trigrams)
+    
+    Returns:
+        Dictionary of n-gram features
+    """
+    words = text.lower().split()
+    words = [re.sub(r'[^a-z]', '', w) for w in words if re.sub(r'[^a-z]', '', w)]
+    
+    if len(words) < 2:
+        return {
+            "bigram_diversity": 0.0,
+            "trigram_diversity": 0.0,
+            "bigram_repetition": 0.0,
+            "trigram_repetition": 0.0
+        }
+    
+    features = {}
+    
+    for n in n_values:
+        if len(words) < n:
+            features[f"{n}gram_diversity"] = 0.0
+            features[f"{n}gram_repetition"] = 0.0
+            continue
+            
+        # Generate n-grams
+        ngrams = [tuple(words[i:i+n]) for i in range(len(words) - n + 1)]
+        
+        if not ngrams:
+            features[f"{n}gram_diversity"] = 0.0
+            features[f"{n}gram_repetition"] = 0.0
+            continue
+        
+        # Count n-grams
+        ngram_counts = Counter(ngrams)
+        
+        # Diversity: unique n-grams / total n-grams
+        diversity = len(ngram_counts) / len(ngrams) if ngrams else 0.0
+        
+        # Repetition: how many n-grams appear more than once
+        repeated = sum(1 for count in ngram_counts.values() if count > 1)
+        repetition = repeated / len(ngram_counts) if ngram_counts else 0.0
+        
+        features[f"{'bi' if n == 2 else 'tri'}gram_diversity"] = float(diversity)
+        features[f"{'bi' if n == 2 else 'tri'}gram_repetition"] = float(repetition)
+    
+    return features
+
+
+def calculate_coherence_metrics(text: str) -> Dict[str, float]:
+    """
+    Calculate text coherence metrics to distinguish AI vs human writing.
+    
+    AI text tends to have:
+    - Higher local coherence (adjacent sentences are related)
+    - More consistent topic focus
+    - Smoother transitions
+    
+    Human text tends to have:
+    - More topic jumps
+    - More varied coherence
+    - Sometimes abrupt transitions
+    """
+    sentences = split_into_sentences(text)
+    
+    if len(sentences) < 2:
+        return {
+            "lexical_overlap": 0.0,
+            "topic_consistency": 0.0,
+            "transition_smoothness": 0.0
+        }
+    
+    # Calculate lexical overlap between adjacent sentences
+    overlaps = []
+    for i in range(len(sentences) - 1):
+        words1 = set(sentences[i].lower().split())
+        words2 = set(sentences[i+1].lower().split())
+        
+        # Remove common stopwords
+        stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 
+                    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 
+                    'would', 'could', 'should', 'may', 'might', 'can', 'to', 'of',
+                    'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into',
+                    'it', 'its', 'this', 'that', 'and', 'or', 'but', 'if', 'so'}
+        
+        words1 = words1 - stopwords
+        words2 = words2 - stopwords
+        
+        if words1 and words2:
+            overlap = len(words1 & words2) / min(len(words1), len(words2))
+            overlaps.append(overlap)
+    
+    lexical_overlap = np.mean(overlaps) if overlaps else 0.0
+    
+    # Topic consistency: variance in sentence lengths (low variance = more consistent)
+    sentence_lengths = [len(s.split()) for s in sentences]
+    length_variance = np.var(sentence_lengths) if len(sentence_lengths) > 1 else 0.0
+    # Normalize: higher score = more consistent (lower variance)
+    topic_consistency = 1.0 / (1.0 + length_variance / 10.0)
+    
+    # Transition smoothness: check for transition words
+    transition_words = ['however', 'therefore', 'moreover', 'furthermore', 'additionally',
+                       'consequently', 'nevertheless', 'meanwhile', 'similarly', 'likewise',
+                       'first', 'second', 'third', 'finally', 'next', 'then', 'also',
+                       'in addition', 'for example', 'in contrast', 'on the other hand']
+    
+    transition_count = 0
+    for sentence in sentences:
+        sentence_lower = sentence.lower()
+        for word in transition_words:
+            if word in sentence_lower:
+                transition_count += 1
+                break
+    
+    transition_smoothness = transition_count / len(sentences) if sentences else 0.0
+    
+    return {
+        "lexical_overlap": float(lexical_overlap),
+        "topic_consistency": float(topic_consistency),
+        "transition_smoothness": float(transition_smoothness)
+    }
+
+
+def calculate_punctuation_features(text: str) -> Dict[str, float]:
+    """
+    Extract punctuation patterns which can distinguish AI from human writing.
+    """
+    if not text:
+        return {
+            "comma_ratio": 0.0,
+            "semicolon_ratio": 0.0,
+            "question_ratio": 0.0,
+            "exclamation_ratio": 0.0,
+            "parentheses_ratio": 0.0
+        }
+    
+    words = text.split()
+    word_count = len(words) if words else 1
+    
+    comma_count = text.count(',')
+    semicolon_count = text.count(';')
+    question_count = text.count('?')
+    exclamation_count = text.count('!')
+    parentheses_count = text.count('(') + text.count(')')
+    
+    return {
+        "comma_ratio": float(comma_count / word_count),
+        "semicolon_ratio": float(semicolon_count / word_count),
+        "question_ratio": float(question_count / word_count),
+        "exclamation_ratio": float(exclamation_count / word_count),
+        "parentheses_ratio": float(parentheses_count / word_count)
+    }
+
+
+def calculate_readability_scores(text: str) -> Dict[str, float]:
+    """
+    Calculate readability metrics (Flesch-Kincaid, etc.)
+    """
+    words = text.split()
+    sentences = split_into_sentences(text)
+    
+    if not words or not sentences:
+        return {
+            "flesch_reading_ease": 0.0,
+            "flesch_kincaid_grade": 0.0
+        }
+    
+    word_count = len(words)
+    sentence_count = len(sentences)
+    
+    # Count syllables (approximate)
+    def count_syllables(word):
+        word = word.lower()
+        vowels = 'aeiou'
+        count = 0
+        prev_vowel = False
+        for char in word:
+            is_vowel = char in vowels
+            if is_vowel and not prev_vowel:
+                count += 1
+            prev_vowel = is_vowel
+        if word.endswith('e'):
+            count = max(1, count - 1)
+        return max(1, count)
+    
+    total_syllables = sum(count_syllables(w) for w in words)
+    
+    # Flesch Reading Ease
+    fre = 206.835 - 1.015 * (word_count / sentence_count) - 84.6 * (total_syllables / word_count)
+    fre = max(0, min(100, fre))  # Clamp to 0-100
+    
+    # Flesch-Kincaid Grade Level
+    fkg = 0.39 * (word_count / sentence_count) + 11.8 * (total_syllables / word_count) - 15.59
+    fkg = max(0, min(20, fkg))  # Clamp to reasonable grade levels
+    
+    return {
+        "flesch_reading_ease": float(fre),
+        "flesch_kincaid_grade": float(fkg)
+    }
+
+
 def extract_all_features(text: str) -> Dict[str, float]:
     """
     Extract all stylometric features and return as a feature vector.
@@ -271,6 +478,22 @@ def extract_all_features(text: str) -> Dict[str, float]:
     semantic_features = extract_semantic_features(text)
     features.update(semantic_features)
     
+    # N-gram features (NEW)
+    ngram_features = extract_ngram_features(text)
+    features.update(ngram_features)
+    
+    # Coherence metrics (NEW)
+    coherence_features = calculate_coherence_metrics(text)
+    features.update(coherence_features)
+    
+    # Punctuation features (NEW)
+    punctuation_features = calculate_punctuation_features(text)
+    features.update(punctuation_features)
+    
+    # Readability scores (NEW)
+    readability_features = calculate_readability_scores(text)
+    features.update(readability_features)
+    
     # Additional text statistics
     words = text.split()
     sentences = split_into_sentences(text)
@@ -290,6 +513,7 @@ def extract_feature_vector(text: str) -> np.ndarray:
     
     # Define feature order for consistent vectorization
     feature_order = [
+        # Original features
         "burstiness",
         "perplexity",
         "rare_word_ratio",
@@ -302,7 +526,25 @@ def extract_feature_vector(text: str) -> np.ndarray:
         "sentence_complexity",
         "word_count",
         "sentence_count",
-        "avg_sentence_length"
+        "avg_sentence_length",
+        # N-gram features
+        "bigram_diversity",
+        "trigram_diversity",
+        "bigram_repetition",
+        "trigram_repetition",
+        # Coherence features
+        "lexical_overlap",
+        "topic_consistency",
+        "transition_smoothness",
+        # Punctuation features
+        "comma_ratio",
+        "semicolon_ratio",
+        "question_ratio",
+        "exclamation_ratio",
+        "parentheses_ratio",
+        # Readability features
+        "flesch_reading_ease",
+        "flesch_kincaid_grade"
     ]
     
     vector = np.array([features.get(f, 0.0) for f in feature_order])
@@ -313,3 +555,16 @@ def extract_feature_vector(text: str) -> np.ndarray:
         vector = vector / norm
     
     return vector
+
+
+# Feature names for interpretability
+FEATURE_NAMES = [
+    "burstiness", "perplexity", "rare_word_ratio", "unique_word_ratio",
+    "noun_ratio", "verb_ratio", "adjective_ratio", "adverb_ratio",
+    "avg_word_length", "sentence_complexity", "word_count", "sentence_count",
+    "avg_sentence_length", "bigram_diversity", "trigram_diversity",
+    "bigram_repetition", "trigram_repetition", "lexical_overlap",
+    "topic_consistency", "transition_smoothness", "comma_ratio",
+    "semicolon_ratio", "question_ratio", "exclamation_ratio",
+    "parentheses_ratio", "flesch_reading_ease", "flesch_kincaid_grade"
+]

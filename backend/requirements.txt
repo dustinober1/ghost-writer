@@ -12,6 +12,8 @@ psycopg2-binary==2.9.9
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
+zxcvbn==4.4.28
+fastapi-mail==1.4.1
 
 # ML and Data Science
 torch==2.1.0
@@ -34,5 +36,16 @@ email-validator==2.3.0
 python-docx==1.1.0
 PyPDF2==3.0.1
 reportlab>=4.0.0  # For generating demo PDFs
+slowapi==0.1.9
+bleach==6.1.0
+python-magic==0.4.27
+structlog==23.2.0
+prometheus-client==0.19.0
+sentry-sdk[fastapi]==1.40.0
+celery==5.3.4
+redis==5.0.1
+
+# Load Testing
+locust==2.20.1
 
 # CORS (handled by FastAPI middleware)

@@ -1,41 +1,47 @@
-FROM python:3.10-slim
+# Stage 1: Build
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    postgresql-client \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
 COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Stage 2: Runtime
+FROM python:3.10-slim as runner
 
-# Download spaCy model
-RUN python -m spacy download en_core_web_sm || true
+WORKDIR /app
 
-# Download NLTK data
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords'); nltk.download('wordnet')" || true
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy application code
-COPY . .
+# Create non-root user
+RUN groupadd -g 1000 appuser && \
+    useradd -r -u 1000 -g appuser appuser && \
+    mkdir -p /app/ml_models/saved_models /app/scripts && \
+    chown -R appuser:appuser /app
 
-# Create directory for ML models
-RUN mkdir -p /app/ml_models/saved_models
+# Copy installed dependencies from builder
+COPY --from=builder --chown=appuser:appuser /root/.local /home/appuser/.local
+COPY --chown=appuser:appuser . .
 
-# Create scripts directory
-RUN mkdir -p /app/scripts
+ENV PATH=/home/appuser/.local/bin:$PATH
+USER appuser
 
-# Expose port
+# Download models as non-root
+RUN python -m spacy download en_core_web_sm || true && \
+    python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger'); nltk.download('stopwords'); nltk.download('wordnet')" || true
+
 EXPOSE 8000
 
-# Health check (using curl if available, otherwise skip)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+  CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

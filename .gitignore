@@ -79,3 +79,5 @@ htmlcov/
 *.ipynb
 .venv/
 ml_models/data/synthetic_documents/
+# Docker build artifacts
+.docker_*_last_modified

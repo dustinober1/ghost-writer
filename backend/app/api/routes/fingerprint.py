@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import List
 from app.models.database import get_db, User
@@ -10,6 +10,9 @@ from app.models.schemas import (
 )
 from app.services.fingerprint_service import get_fingerprint_service
 from app.utils.auth import get_current_user
+from app.middleware.rate_limit import general_rate_limit
+from app.utils.file_validation import validate_upload_file, validate_text_length
+from app.middleware.input_sanitization import sanitize_text, sanitize_filename
 import docx
 import PyPDF2
 import io
@@ -18,9 +21,11 @@ router = APIRouter(prefix="/api/fingerprint", tags=["fingerprint"])
 
 
 @router.post("/upload", response_model=WritingSampleResponse, status_code=status.HTTP_201_CREATED)
+@general_rate_limit
 def upload_writing_sample(
     text: str = None,
     file: UploadFile = File(None),
+    request: Request = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -32,15 +37,19 @@ def upload_writing_sample(
     text_content = None
     
     if file:
+        # Validate file
+        validate_upload_file(file)
+        sanitized_filename = sanitize_filename(file.filename)
+        
         # Read file content
         file_content = file.file.read()
         
-        if file.filename.endswith('.txt'):
+        if sanitized_filename.endswith('.txt'):
             text_content = file_content.decode('utf-8')
-        elif file.filename.endswith('.docx'):
+        elif sanitized_filename.endswith('.docx'):
             doc = docx.Document(io.BytesIO(file_content))
             text_content = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
-        elif file.filename.endswith('.pdf'):
+        elif sanitized_filename.endswith('.pdf'):
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
             text_content = '\n'.join([page.extract_text() for page in pdf_reader.pages])
         else:
@@ -48,8 +57,12 @@ def upload_writing_sample(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unsupported file type. Supported: txt, docx, pdf"
             )
+        
+        # Sanitize extracted text
+        text_content = sanitize_text(text_content)
     elif text:
-        text_content = text
+        validate_text_length(text)
+        text_content = sanitize_text(text)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

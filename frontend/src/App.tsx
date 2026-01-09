@@ -1,20 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
-import TextInput from './components/TextInput/TextInput';
-import HeatMap from './components/HeatMap/HeatMap';
-import ProfileManager from './components/ProfileManager/ProfileManager';
-import RewriteInterface from './components/RewriteInterface/RewriteInterface';
-import Login from './components/Login/Login';
-import Dashboard from './components/Dashboard/Dashboard';
-import History from './components/Dashboard/History';
+import ErrorBoundary from './components/ErrorBoundary/ErrorBoundary';
+import OfflineBanner from './components/OfflineBanner/OfflineBanner';
 import Navbar from './components/layout/Navbar';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
 import Container from './components/layout/Container';
 import Spinner from './components/ui/Spinner';
+
+// Lazy load route components for code splitting
+const TextInput = lazy(() => import('./components/TextInput/TextInput'));
+const HeatMap = lazy(() => import('./components/HeatMap/HeatMap'));
+const ProfileManager = lazy(() => import('./components/ProfileManager/ProfileManager'));
+const RewriteInterface = lazy(() => import('./components/RewriteInterface/RewriteInterface'));
+const Login = lazy(() => import('./components/Login/Login'));
+const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
+const History = lazy(() => import('./components/Dashboard/History'));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -54,11 +58,17 @@ function AnimatedRoutes() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
+      <OfflineBanner />
       <Navbar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       
       {isAuthenticated && <Sidebar />}
       
       <main className={isAuthenticated ? 'flex-1 lg:ml-64' : 'flex-1'}>
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Spinner size="lg" />
+          </div>
+        }>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}
@@ -154,6 +164,7 @@ function AnimatedRoutes() {
             </Routes>
           </motion.div>
         </AnimatePresence>
+        </Suspense>
       </main>
       
       {isAuthenticated && <Footer />}
@@ -163,13 +174,15 @@ function AnimatedRoutes() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <Router>
-          <AnimatedRoutes />
-        </Router>
-      </ToastProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <Router>
+            <AnimatedRoutes />
+          </Router>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

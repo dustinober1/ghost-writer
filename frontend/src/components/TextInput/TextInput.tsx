@@ -167,6 +167,7 @@ export default function TextInput() {
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    console.log('File input changed:', files); // Debug logging
     if (files && files.length > 0) {
       handleFileUpload(files);
     }
