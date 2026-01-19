@@ -195,7 +195,7 @@ class BatchDocumentSummary(BaseModel):
     filename: str
     word_count: int
     ai_probability: Optional[float] = None
-    confidence_level: Optional[ConfidenceLevel] = None
+    confidence_level: Optional[str] = None
     cluster_id: Optional[int] = None
     status: BatchDocumentStatus
 
