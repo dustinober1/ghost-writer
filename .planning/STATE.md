@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 4 of 7 (in progress)
-Plan: 2 of 3 in Phase 4
-Status: Plan 04-02 Complete
-Last activity: 2026-01-19 — Completed 04-02 (Ensemble Calibration and Performance Monitoring)
+Plan: 3 of 3 in Phase 4
+Status: Plan 04-03 Complete
+Last activity: 2026-01-19 — Completed 04-03 (Temporal Analysis and AI Injection Detection)
 
-Progress: [██████████████░░░░░░░░░░░░░] 50% (14/28 total plans complete)
+Progress: [███████████████░░░░░░░░░░░░] 54% (15/28 total plans complete)
 
 ## Performance Metrics
 
@@ -30,15 +30,15 @@ Progress: [██████████████░░░░░░░░░
 | 1. Explainability | 4 | 4 | 15 minutes |
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
-| 4. Multi-Model Ensemble | 3 | 2 | 8 minutes |
+| 4. Multi-Model Ensemble | 3 | 3 | 10 minutes |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min), 04-01 (8 min), 04-02 (8 min)
-- Trend: Phase 4 continuing with ensemble calibration and performance tracking
-- Phase 4 delivered: EnsembleDetector, base detectors, weights, calibration, performance monitoring, ensemble API
+- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min), 04-01 (8 min), 04-02 (8 min), 04-03 (14 min)
+- Trend: Phase 4 complete with temporal analysis and injection detection
+- Phase 4 delivered: EnsembleDetector, base detectors, weights, calibration, performance monitoring, ensemble API, temporal analysis
 
 *Updated after each phase completion*
 
@@ -146,6 +146,14 @@ Recent decisions affecting current work:
 6. **Separate calibration dataset requirement** - Calibration must use held-out data different from training to prevent data leakage
 7. **Public read-only weights endpoint** - GET /api/ensemble/weights requires no auth for transparency, admin endpoints for modifications
 
+**From Plan 04-03 (Temporal Analysis and AI Injection Detection):**
+1. **Use difflib.SequenceMatcher for version diffing** - Python's built-in library provides robust diff algorithm without external dependencies. Returns opcodes for added/removed/modified sections.
+2. **SHA-256 content hashing for deduplication** - Prevents storing identical versions, saving storage and enabling efficient change detection. Hash stored in indexed column for fast lookup.
+3. **Trend threshold of 0.2 AI probability** - Minimum difference between first and last version averages to indicate increasing/decreasing trend. Balances noise sensitivity with meaningful change detection.
+4. **Injection severity tiers** - High (>=0.8), medium (>=0.6), low (<0.6) AI probability thresholds. Enables UI prioritization and risk assessment.
+5. **Per-segment AI probability storage** - Stores segment-level scores in JSON for each version. Enables granular injection detection at specific text positions.
+6. **SVG-based line chart without external dependencies** - Uses native SVG with polyline for timeline visualization. Avoids heavy charting libraries while providing clear visual feedback.
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -184,8 +192,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 21:17 UTC
-Stopped at: Completed 04-02-PLAN.md (Ensemble Calibration and Performance Monitoring)
+Last session: 2026-01-19 21:28 UTC
+Stopped at: Completed 04-03-PLAN.md (Temporal Analysis and AI Injection Detection)
 Resume file: None
 
 **Infrastructure Note:**
@@ -220,3 +228,8 @@ Resume file: None
 - **NEW:** Ensemble management API: /api/ensemble/stats, /calibrate, /weights, /track, /reliability, /predictions
 - **NEW:** ModelPerformance database table for persistent tracking
 - **NEW:** Calibration metrics: Brier score, reliability diagram data
+- **NEW:** Temporal module at backend/app/ml/temporal/ for version tracking
+- **NEW:** DocumentVersion database table with SHA-256 content hashing
+- **NEW:** VersionTracker, TimelineAnalyzer, InjectionDetector classes
+- **NEW:** Temporal analysis API: POST /version, GET /timeline, /versions, /injections, POST /compare, GET /summary
+- **NEW:** React TemporalAnalysis component with timeline visualization, injection display, version comparison (858 lines)
