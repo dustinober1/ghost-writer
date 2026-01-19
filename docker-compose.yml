@@ -52,6 +52,41 @@ services:
           cpus: '0.25'
           memory: 256M
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ghostwriter_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_MODELS=llama3:8b,nomic-embed-text:v1.5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - ghostwriter_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 4G
+        reservations:
+          cpus: '2.0'
+          memory: 2G
+    # GPUs: Uncomment to enable GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
   backend:
     build:
       context: ./backend
@@ -65,8 +100,8 @@ services:
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
       REFRESH_TOKEN_EXPIRE_DAYS: 30
       # Ollama Configuration
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3:8b}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
@@ -77,6 +112,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -108,13 +145,15 @@ services:
     environment:
       DATABASE_URL: postgresql://ghostwriter:ghostwriter_password@postgres:5432/ghostwriter
       REDIS_URL: redis://redis:6379/0
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3:8b}
       ENVIRONMENT: ${ENVIRONMENT:-development}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     volumes:
       - ./backend:/app
@@ -196,6 +235,7 @@ volumes:
   postgres_data:
   redis_data:
   ml_models:
+  ollama_data:
 
 networks:
   ghostwriter_network:
