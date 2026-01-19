@@ -568,3 +568,182 @@ FEATURE_NAMES = [
     "semicolon_ratio", "question_ratio", "exclamation_ratio",
     "parentheses_ratio", "flesch_reading_ease", "flesch_kincaid_grade"
 ]
+
+
+# Human-like baselines for feature importance calculation
+# These represent typical values for human-written text
+HUMAN_LIKE_BASELINES = {
+    "burstiness": {"human_min": 0.5, "human_max": 1.5, "direction": "higher_is_human"},
+    "perplexity": {"human_min": 50.0, "human_max": 100.0, "direction": "higher_is_human"},
+    "rare_word_ratio": {"human_min": 0.15, "human_max": 0.40, "direction": "higher_is_human"},
+    "unique_word_ratio": {"human_min": 0.60, "human_max": 0.90, "direction": "higher_is_human"},
+    "noun_ratio": {"human_min": 0.20, "human_max": 0.35, "direction": "higher_is_human"},
+    "verb_ratio": {"human_min": 0.10, "human_max": 0.20, "direction": "higher_is_human"},
+    "adjective_ratio": {"human_min": 0.05, "human_max": 0.15, "direction": "higher_is_human"},
+    "adverb_ratio": {"human_min": 0.03, "human_max": 0.10, "direction": "higher_is_human"},
+    "avg_word_length": {"human_min": 4.5, "human_max": 5.5, "direction": "higher_is_human"},
+    "sentence_complexity": {"human_min": 15.0, "human_max": 25.0, "direction": "higher_is_human"},
+    "bigram_diversity": {"human_min": 0.70, "human_max": 0.95, "direction": "higher_is_human"},
+    "trigram_diversity": {"human_min": 0.80, "human_max": 0.98, "direction": "higher_is_human"},
+    "bigram_repetition": {"human_min": 0.0, "human_max": 0.15, "direction": "lower_is_human"},
+    "trigram_repetition": {"human_min": 0.0, "human_max": 0.05, "direction": "lower_is_human"},
+    "lexical_overlap": {"human_min": 0.1, "human_max": 0.3, "direction": "lower_is_human"},
+    "topic_consistency": {"human_min": 0.3, "human_max": 0.7, "direction": "lower_is_human"},
+    "transition_smoothness": {"human_min": 0.1, "human_max": 0.4, "direction": "higher_is_human"},
+    "comma_ratio": {"human_min": 0.05, "human_max": 0.15, "direction": "higher_is_human"},
+    "semicolon_ratio": {"human_min": 0.005, "human_max": 0.03, "direction": "higher_is_human"},
+    "question_ratio": {"human_min": 0.01, "human_max": 0.05, "direction": "higher_is_human"},
+    "exclamation_ratio": {"human_min": 0.005, "human_max": 0.02, "direction": "higher_is_human"},
+    "parentheses_ratio": {"human_min": 0.01, "human_max": 0.05, "direction": "higher_is_human"},
+    "flesch_reading_ease": {"human_min": 30.0, "human_max": 70.0, "direction": "higher_is_human"},
+    "flesch_kincaid_grade": {"human_min": 8.0, "human_max": 14.0, "direction": "higher_is_human"},
+}
+
+
+def calculate_feature_importance(text: str, ai_probability: float) -> Dict[str, float]:
+    """
+    Calculate feature importance for individual sentences.
+
+    This function determines which stylometric features contributed most to the AI detection score.
+    It uses a heuristic-based approach comparing feature values to human-like baselines.
+
+    Args:
+        text: The text segment (sentence or paragraph) to analyze
+        ai_probability: The AI probability score for this segment (0-1)
+
+    Returns:
+        Dictionary mapping feature names to importance scores (0-1, higher = more important)
+        Sorted by importance (most important first). Returns top 5-10 features.
+
+    Example:
+        >>> result = calculate_feature_importance("This is a test sentence.", 0.75)
+        >>> print(list(result.keys())[:3])
+        ['burstiness', 'perplexity', 'unique_word_ratio']
+    """
+    # Extract all features for this text segment
+    features = extract_all_features(text)
+
+    if not features:
+        return {}
+
+    # Calculate importance for each feature
+    importance_scores = {}
+
+    for feature_name, feature_value in features.items():
+        # Skip features not in our baseline knowledge
+        if feature_name not in HUMAN_LIKE_BASELINES:
+            continue
+
+        baseline = HUMAN_LIKE_BASELINES[feature_name]
+        human_min = baseline["human_min"]
+        human_max = baseline["human_max"]
+        direction = baseline["direction"]
+
+        # Calculate how far this feature value is from human-like range
+        if direction == "higher_is_human":
+            # Higher values are more human-like
+            if feature_value >= human_min:
+                # Within or above human range - low importance for AI detection
+                deviation = 0.0
+            else:
+                # Below human range - calculate deviation
+                deviation = (human_min - feature_value) / human_min
+        else:  # lower_is_human
+            # Lower values are more human-like
+            if feature_value <= human_max:
+                # Within or below human range - low importance for AI detection
+                deviation = 0.0
+            else:
+                # Above human range - calculate deviation
+                deviation = (feature_value - human_max) / human_max
+
+        # Normalize deviation to [0, 1] range for importance
+        # Features further from human range get higher importance
+        importance = min(1.0, max(0.0, deviation))
+
+        # Only include features with meaningful importance
+        if importance > 0.05:  # Filter out very low importance features
+            importance_scores[feature_name] = importance
+
+    # Sort by importance (highest first) and return top 10
+    sorted_features = dict(sorted(importance_scores.items(), key=lambda x: x[1], reverse=True)[:10])
+
+    return sorted_features
+
+
+def generate_feature_interpretation(feature_name: str, feature_value: float) -> str:
+    """
+    Generate human-readable interpretation for a feature value.
+
+    Args:
+        feature_name: Name of the feature
+        feature_value: Value of the feature
+
+    Returns:
+        Human-readable interpretation string
+    """
+    if feature_name not in HUMAN_LIKE_BASELINES:
+        return f"{feature_name}: {feature_value:.2f}"
+
+    baseline = HUMAN_LIKE_BASELINES[feature_name]
+    human_min = baseline["human_min"]
+    human_max = baseline["human_max"]
+    direction = baseline["direction"]
+
+    # Determine if value is high, medium, or low relative to human baseline
+    if direction == "higher_is_human":
+        if feature_value < human_min * 0.7:
+            level = "Very Low"
+            implication = "suggests AI"
+        elif feature_value < human_min:
+            level = "Low"
+            implication = "indicates AI patterns"
+        elif feature_value > human_max:
+            level = "Very High"
+            implication = "strongly suggests human"
+        else:
+            level = "Normal"
+            implication = "within human range"
+    else:  # lower_is_human
+        if feature_value > human_max * 1.5:
+            level = "Very High"
+            implication = "suggests AI"
+        elif feature_value > human_max:
+            level = "High"
+            implication = "indicates AI patterns"
+        elif feature_value < human_min:
+            level = "Very Low"
+            implication = "strongly suggests human"
+        else:
+            level = "Normal"
+            implication = "within human range"
+
+    # Feature-specific interpretations
+    interpretations = {
+        "burstiness": f"{level} burstiness ({feature_value:.2f}) - {'consistent sentence lengths' if level in ['Very Low', 'Low'] else 'varied sentence lengths' if level in ['Very High', 'High'] else 'moderate variation'}",
+        "perplexity": f"{level} perplexity ({feature_value:.1f}) - {'predictable' if level in ['Very Low', 'Low'] else 'unpredictable' if level in ['Very High', 'High'] else 'moderate'} word patterns",
+        "rare_word_ratio": f"{level} rare word ratio ({feature_value:.2f}) - {'common' if level in ['Very Low', 'Low'] else 'rich' if level in ['Very High', 'High'] else 'moderate'} vocabulary",
+        "unique_word_ratio": f"{level} unique word ratio ({feature_value:.2f}) - {'repetitive' if level in ['Very Low', 'Low'] else 'diverse' if level in ['Very High', 'High'] else 'moderate'} word choice",
+        "noun_ratio": f"{level} noun ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} noun usage",
+        "verb_ratio": f"{level} verb ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} verb usage",
+        "adjective_ratio": f"{level} adjective ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} adjective usage",
+        "adverb_ratio": f"{level} adverb ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} adverb usage",
+        "avg_word_length": f"{level} avg word length ({feature_value:.1f}) - {'simple' if level in ['Very Low', 'Low'] else 'complex' if level in ['Very High', 'High'] else 'moderate'} vocabulary",
+        "sentence_complexity": f"{level} sentence complexity ({feature_value:.1f} words/sentence) - {'simple' if level in ['Very Low', 'Low'] else 'complex' if level in ['Very High', 'High'] else 'moderate'} structure",
+        "bigram_diversity": f"{level} bigram diversity ({feature_value:.2f}) - {'repetitive' if level in ['Very Low', 'Low'] else 'diverse' if level in ['Very High', 'High'] else 'moderate'} word pairs",
+        "trigram_diversity": f"{level} trigram diversity ({feature_value:.2f}) - {'repetitive' if level in ['Very Low', 'Low'] else 'diverse' if level in ['Very High', 'High'] else 'moderate'} word triplets",
+        "bigram_repetition": f"{level} bigram repetition ({feature_value:.2f}) - {'repetitive' if level in ['Very High', 'High'] else 'varied' if level in ['Very Low', 'Low'] else 'moderate'} patterns",
+        "trigram_repetition": f"{level} trigram repetition ({feature_value:.2f}) - {'repetitive' if level in ['Very High', 'High'] else 'varied' if level in ['Very Low', 'Low'] else 'moderate'} patterns",
+        "lexical_overlap": f"{level} lexical overlap ({feature_value:.2f}) - {'high' if level in ['Very High', 'High'] else 'low' if level in ['Very Low', 'Low'] else 'moderate'} sentence-to-sentence similarity",
+        "topic_consistency": f"{level} topic consistency ({feature_value:.2f}) - {'very consistent' if level in ['Very High', 'High'] else 'varied' if level in ['Very Low', 'Low'] else 'moderate'} focus",
+        "transition_smoothness": f"{level} transition smoothness ({feature_value:.2f}) - {'abrupt' if level in ['Very Low', 'Low'] else 'smooth' if level in ['Very High', 'High'] else 'moderate'} transitions",
+        "comma_ratio": f"{level} comma ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} punctuation",
+        "semicolon_ratio": f"{level} semicolon ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} punctuation",
+        "question_ratio": f"{level} question ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} question usage",
+        "exclamation_ratio": f"{level} exclamation ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} exclamation usage",
+        "parentheses_ratio": f"{level} parentheses ratio ({feature_value:.2f}) - {'unusual' if level in ['Very Low', 'Low', 'Very High', 'High'] else 'normal'} parenthetical usage",
+        "flesch_reading_ease": f"{level} Flesch Reading Ease ({feature_value:.1f}) - {'difficult' if level in ['Very Low', 'Low'] else 'easy' if level in ['Very High', 'High'] else 'moderate'} to read",
+        "flesch_kincaid_grade": f"{level} Flesch-Kincaid Grade ({feature_value:.1f}) - {'advanced' if level in ['Very High', 'High'] else 'simple' if level in ['Very Low', 'Low'] else 'moderate'} reading level",
+    }
+
+    return interpretations.get(feature_name, f"{feature_name}: {feature_value:.2f}")
