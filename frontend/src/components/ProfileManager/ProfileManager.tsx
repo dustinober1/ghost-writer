@@ -13,6 +13,7 @@ import { Upload, FileText, Fingerprint, CheckCircle2, X, Plus, Trash2, Sparkles,
 import { cn } from '../../utils/cn';
 import ProgressBar from '../ui/ProgressBar';
 import CorpusBuilder from './CorpusBuilder';
+import FingerprintProfile from './FingerprintProfile';
 
 interface FingerprintStatus {
   has_fingerprint: boolean;
@@ -321,9 +322,10 @@ export default function ProfileManager() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="basic">Basic Fingerprint</TabsTrigger>
           <TabsTrigger value="corpus">Enhanced Corpus</TabsTrigger>
+          <TabsTrigger value="profile" disabled={!status?.has_fingerprint}>Fingerprint Profile</TabsTrigger>
         </TabsList>
 
         {/* Basic Fingerprint Tab */}
@@ -504,6 +506,11 @@ export default function ProfileManager() {
         {/* Enhanced Corpus Tab */}
         <TabsContent value="corpus" className="mt-6">
           <CorpusBuilder />
+        </TabsContent>
+
+        {/* Fingerprint Profile Tab */}
+        <TabsContent value="profile" className="mt-6">
+          <FingerprintProfile />
         </TabsContent>
       </Tabs>
     </div>
