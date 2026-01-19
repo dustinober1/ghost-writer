@@ -238,4 +238,36 @@ export const batchAPI = {
   },
 };
 
+// API Keys API
+export const apiKeysAPI = {
+  create: async (name: string, expires_in_days?: number) => {
+    const response = await api.post('/api/keys', { name, expires_in_days });
+    // Store the full key as it's only shown once
+    if (response.data.key) {
+      return response.data;
+    }
+    return response.data;
+  },
+  list: async () => {
+    const response = await api.get('/api/keys');
+    return response.data;
+  },
+  delete: async (keyId: number) => {
+    const response = await api.delete(`/api/keys/${keyId}`);
+    return response.data;
+  },
+};
+
+// Usage API
+export const usageAPI = {
+  getUsage: async () => {
+    const response = await api.get('/api/usage');
+    return response.data;
+  },
+  getLimits: async () => {
+    const response = await api.get('/api/limits');
+    return response.data;
+  },
+};
+
 export default api;
