@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fingerprintAPI, getErrorMessage, CorpusStatus } from '../../services/api';
+import { fingerprintAPI, driftAPI, getErrorMessage, CorpusStatus, DriftAlertsList } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import Button from '../ui/Button';
@@ -9,11 +9,12 @@ import Alert from '../ui/Alert';
 import Textarea from '../ui/Textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
 import Modal from '../ui/Modal';
-import { Upload, FileText, Fingerprint, CheckCircle2, X, Plus, Trash2, Sparkles, Clock, Target } from 'lucide-react';
+import { Upload, FileText, Fingerprint, CheckCircle2, X, Plus, Trash2, Sparkles, Clock, Target, AlertTriangle } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import ProgressBar from '../ui/ProgressBar';
 import CorpusBuilder from './CorpusBuilder';
 import FingerprintProfile from './FingerprintProfile';
+import DriftAlerts from './DriftAlerts';
 
 interface FingerprintStatus {
   has_fingerprint: boolean;
@@ -31,6 +32,7 @@ interface FingerprintStatus {
 export default function ProfileManager() {
   const [status, setStatus] = useState<FingerprintStatus | null>(null);
   const [corpusStatus, setCorpusStatus] = useState<CorpusStatus | null>(null);
+  const [unacknowledgedCount, setUnacknowledgedCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const [uploadText, setUploadText] = useState('');
@@ -44,7 +46,18 @@ export default function ProfileManager() {
   useEffect(() => {
     loadStatus();
     loadCorpusStatus();
+    loadUnacknowledgedCount();
   }, []);
+
+  const loadUnacknowledgedCount = async () => {
+    try {
+      const data = await driftAPI.getAlerts(false);
+      setUnacknowledgedCount(data.unacknowledged_count || 0);
+    } catch (err: any) {
+      // Silent fail - drift alerts may not be available
+      console.debug('Could not load drift alert count');
+    }
+  };
 
   const loadStatus = async () => {
     try {
@@ -322,10 +335,20 @@ export default function ProfileManager() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="basic" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Basic Fingerprint</TabsTrigger>
           <TabsTrigger value="corpus">Enhanced Corpus</TabsTrigger>
           <TabsTrigger value="profile" disabled={!status?.has_fingerprint}>Fingerprint Profile</TabsTrigger>
+          <TabsTrigger value="drift" className="relative">
+            <span className="flex items-center gap-2">
+              Drift Alerts
+              {unacknowledgedCount > 0 && (
+                <Badge variant="error" size="sm" className="ml-1">
+                  {unacknowledgedCount}
+                </Badge>
+              )}
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Basic Fingerprint Tab */}
@@ -511,6 +534,11 @@ export default function ProfileManager() {
         {/* Fingerprint Profile Tab */}
         <TabsContent value="profile" className="mt-6">
           <FingerprintProfile />
+        </TabsContent>
+
+        {/* Drift Alerts Tab */}
+        <TabsContent value="drift" className="mt-6">
+          <DriftAlerts onAlertAcknowledged={() => setUnacknowledgedCount(c => Math.max(0, c - 1))} />
         </TabsContent>
       </Tabs>
     </div>
