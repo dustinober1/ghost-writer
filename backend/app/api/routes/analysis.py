@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 @analysis_rate_limit
 def analyze_text(
     request: AnalysisRequest,
-    req: Request,
+    http_request: Request,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):

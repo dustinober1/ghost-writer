@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.models.database import get_db, User, RefreshToken
@@ -225,17 +225,50 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+def extract_token_from_header(request: Request) -> Optional[str]:
+    """
+    Extract JWT token from Authorization header.
+    Returns None if no token or invalid format.
+    """
+    authorization = request.headers.get("Authorization")
+    if not authorization:
+        return None
+
+    # Expected format: "Bearer <token>"
+    parts = authorization.split()
+    if parts[0].lower() != "bearer" or len(parts) != 2:
+        return None
+
+    return parts[1]
+
+
+def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
     """
     Get the current authenticated user from JWT token, but return None if not authenticated.
     Used for development mode to allow API testing without full auth flow.
     """
+    # Extract token from Authorization header
+    token = extract_token_from_header(request)
+
     # In development mode, if no token provided, return None
     if os.getenv("ENVIRONMENT") == "development" and not token:
         return None
 
-    # Try to get user, but return None if auth fails
+    # No token provided
+    if not token:
+        return None
+
+    # Try to decode and validate token
     try:
-        return get_current_user(token, db)
-    except HTTPException:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if not email:
+            return None
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user or not user.is_active:
+            return None
+
+        return user
+    except (JWTError, Exception):
         return None
