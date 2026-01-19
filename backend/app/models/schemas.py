@@ -76,12 +76,20 @@ class FingerprintStatus(BaseModel):
 
 
 # Analysis Schemas
+class FeatureAttribution(BaseModel):
+    """Individual feature attribution for explaining AI detection"""
+    feature_name: str
+    importance: float  # 0-1 normalized importance score
+    interpretation: str  # Human-readable explanation
+
+
 class TextSegment(BaseModel):
     text: str
     ai_probability: float
     start_index: int
     end_index: int
     confidence_level: ConfidenceLevel
+    feature_attribution: Optional[List[FeatureAttribution]] = None  # Top 5 contributing features
 
 
 class HeatMapData(BaseModel):

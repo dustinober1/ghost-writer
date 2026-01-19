@@ -5,7 +5,12 @@ Uses Ollama embeddings for improved accuracy.
 """
 from typing import List, Dict, Optional
 import numpy as np
-from app.ml.feature_extraction import extract_feature_vector, extract_all_features
+from app.ml.feature_extraction import (
+    extract_feature_vector,
+    extract_all_features,
+    calculate_feature_importance,
+    generate_feature_interpretation
+)
 from app.ml.contrastive_model import get_contrastive_model
 from app.ml.fingerprint import compare_to_fingerprint
 from app.ml.ollama_embeddings import get_ollama_embedding
@@ -68,17 +73,17 @@ class AnalysisService:
         # Analyze each segment
         segment_results = []
         current_index = 0
-        
+
         for segment in segments:
             if not segment.strip():
                 continue
-            
+
             # Extract stylometric features (used for heuristics and fingerprint path)
             segment_features = extract_feature_vector(segment)
 
             # Get Ollama embedding for this segment
             ollama_embedding = get_ollama_embedding(segment)
-            
+
             # Calculate AI probability
             if user_fingerprint:
                 # Compare to user's fingerprint
@@ -103,20 +108,26 @@ class AnalysisService:
                 else:
                     # Fallback to stylometric only if Ollama unavailable
                     ai_probability = base_ai_prob
-            
+
+            # Calculate feature attribution
+            feature_attribution = self._generate_feature_attribution(
+                segment, float(ai_probability)
+            )
+
             # Find segment position in original text
             start_index = text.find(segment, current_index)
             if start_index == -1:
                 start_index = current_index
             end_index = start_index + len(segment)
             current_index = end_index
-            
+
             segment_results.append({
                 "text": segment,
                 "ai_probability": float(ai_probability),
                 "start_index": start_index,
                 "end_index": end_index,
-                "confidence_level": self._calculate_confidence_level(float(ai_probability))
+                "confidence_level": self._calculate_confidence_level(float(ai_probability)),
+                "feature_attribution": feature_attribution
             })
         
         # Calculate overall AI probability
@@ -194,6 +205,49 @@ class AnalysisService:
             return ConfidenceLevel.MEDIUM
         else:
             return ConfidenceLevel.LOW
+
+    def _generate_feature_attribution(
+        self,
+        segment: str,
+        ai_probability: float
+    ) -> List[Dict[str, any]]:
+        """
+        Generate feature attribution for a text segment.
+
+        This identifies which stylometric features contributed most to the AI detection score
+        and provides human-readable interpretations.
+
+        Args:
+            segment: The text segment (sentence or paragraph)
+            ai_probability: The AI probability score for this segment
+
+        Returns:
+            List of feature attribution dicts with feature_name, importance, and interpretation
+            Returns top 5 features by importance.
+        """
+        # Calculate feature importance
+        importance_scores = calculate_feature_importance(segment, ai_probability)
+
+        if not importance_scores:
+            return []
+
+        # Get top 5 features and generate interpretations
+        feature_attribution = []
+        for feature_name, importance in list(importance_scores.items())[:5]:
+            # Extract raw feature value for interpretation
+            all_features = extract_all_features(segment)
+            feature_value = all_features.get(feature_name, 0.0)
+
+            # Generate human-readable interpretation
+            interpretation = generate_feature_interpretation(feature_name, feature_value)
+
+            feature_attribution.append({
+                "feature_name": feature_name,
+                "importance": float(importance),
+                "interpretation": interpretation
+            })
+
+        return feature_attribution
     
     def analyze_with_fingerprint(
         self,
