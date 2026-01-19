@@ -138,6 +138,25 @@ app.include_router(api_keys.router)
 app.include_router(docs.router)
 
 
+# In development mode, optionally provide public docs for convenience
+# Set ENVIRONMENT=development and ENABLE_PUBLIC_DOCS=true to enable
+if os.getenv("ENVIRONMENT") == "development" and os.getenv("ENABLE_PUBLIC_DOCS", "").lower() == "true":
+    @app.get("/dev-docs", include_in_schema=False)
+    async def dev_docs():
+        """Public docs in development mode only"""
+        from fastapi.openapi.docs import get_swagger_ui_html
+        return get_swagger_ui_html(
+            openapi_url="/dev-openapi.json",
+            title=f"{app.title} - Dev Docs (Public)"
+        )
+
+    @app.get("/dev-openapi.json", include_in_schema=False)
+    async def dev_openapi():
+        """Public OpenAPI schema in development mode only"""
+        from fastapi.openapi.utils import get_openapi
+        return get_openapi(title=app.title, version=app.version, routes=app.routes)
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup"""
