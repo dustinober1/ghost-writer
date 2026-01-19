@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fingerprintAPI, getErrorMessage } from '../../services/api';
+import { fingerprintAPI, getErrorMessage, CorpusStatus } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 import Card, { CardContent, CardDescription, CardHeader, CardTitle } from '../ui/Card';
 import Button from '../ui/Button';
@@ -12,6 +12,7 @@ import Modal from '../ui/Modal';
 import { Upload, FileText, Fingerprint, CheckCircle2, X, Plus, Trash2, Sparkles, Clock, Target } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import ProgressBar from '../ui/ProgressBar';
+import CorpusBuilder from './CorpusBuilder';
 
 interface FingerprintStatus {
   has_fingerprint: boolean;
@@ -28,6 +29,7 @@ interface FingerprintStatus {
 
 export default function ProfileManager() {
   const [status, setStatus] = useState<FingerprintStatus | null>(null);
+  const [corpusStatus, setCorpusStatus] = useState<CorpusStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, currentFile: '' });
   const [uploadText, setUploadText] = useState('');
@@ -40,6 +42,7 @@ export default function ProfileManager() {
 
   useEffect(() => {
     loadStatus();
+    loadCorpusStatus();
   }, []);
 
   const loadStatus = async () => {
@@ -49,6 +52,16 @@ export default function ProfileManager() {
     } catch (err: any) {
       console.error('Load status error:', err);
       showError(getErrorMessage(err));
+    }
+  };
+
+  const loadCorpusStatus = async () => {
+    try {
+      const data = await fingerprintAPI.corpus.getStatus();
+      setCorpusStatus(data);
+    } catch (err: any) {
+      // Silent fail for corpus status - may not have any samples yet
+      console.debug('Corpus status not available');
     }
   };
 
@@ -293,6 +306,10 @@ export default function ProfileManager() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Upload at least {sampleGoal - (status?.sample_count || 0)} more sample{sampleGoal - (status?.sample_count || 0) !== 1 ? 's' : ''} to generate fingerprint
               </p>
+            ) : corpusStatus?.ready_for_fingerprint ? (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                You have enough samples for an enhanced fingerprint with time-weighted training. Check the Enhanced Corpus tab to generate it.
+              </p>
             ) : (
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Your fingerprint is active and ready to use
@@ -302,177 +319,193 @@ export default function ProfileManager() {
         </Card>
       </div>
 
-      {/* Upload Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Upload Writing Samples</CardTitle>
-          <CardDescription>
-            Upload your past writing to build your personal fingerprint. The more samples you provide, the more accurate your fingerprint will be.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="file" className="w-full">
-            <TabsList>
-              <TabsTrigger value="file">Upload File</TabsTrigger>
-              <TabsTrigger value="text">Paste Text</TabsTrigger>
-            </TabsList>
+      {/* Main Tabs */}
+      <Tabs defaultValue="basic" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="basic">Basic Fingerprint</TabsTrigger>
+          <TabsTrigger value="corpus">Enhanced Corpus</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="file" className="space-y-4">
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={cn(
-                  'border-2 border-dashed rounded-lg p-12 text-center transition-colors',
-                  isDragging
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20'
-                    : 'border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600'
-                )}
-              >
-                <Upload className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  Drag and drop files here, or click to browse
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                  Supports .txt, .docx, .pdf files (multiple files supported)
-                </p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".txt,.docx,.pdf"
-                  multiple
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                  id="file-upload"
-                  disabled={loading}
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  {loading ? 'Uploading...' : 'Choose Files'}
-                </Button>
-                {loading && uploadProgress.total > 0 && (
-                  <div className="mt-4 w-full max-w-md mx-auto">
-                    <ProgressBar
-                      value={uploadProgress.current}
-                      max={uploadProgress.total}
-                      showLabel
-                      label={uploadProgress.currentFile 
-                        ? `Uploading: ${uploadProgress.currentFile} (${uploadProgress.current + 1}/${uploadProgress.total})`
-                        : `Processing files (${uploadProgress.current}/${uploadProgress.total})`}
-                      size="md"
+        {/* Basic Fingerprint Tab */}
+        <TabsContent value="basic" className="space-y-6 mt-6">
+          {/* Upload Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload Writing Samples</CardTitle>
+              <CardDescription>
+                Upload your past writing to build your personal fingerprint. The more samples you provide, the more accurate your fingerprint will be.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="file" className="w-full">
+                <TabsList>
+                  <TabsTrigger value="file">Upload File</TabsTrigger>
+                  <TabsTrigger value="text">Paste Text</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="file" className="space-y-4">
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    className={cn(
+                      'border-2 border-dashed rounded-lg p-12 text-center transition-colors',
+                      isDragging
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/20'
+                        : 'border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-600'
+                    )}
+                  >
+                    <Upload className="h-12 w-12 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      Drag and drop files here, or click to browse
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
+                      Supports .txt, .docx, .pdf files (multiple files supported)
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".txt,.docx,.pdf"
+                      multiple
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                      id="file-upload"
+                      disabled={loading}
                     />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading}
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      {loading ? 'Uploading...' : 'Choose Files'}
+                    </Button>
+                    {loading && uploadProgress.total > 0 && (
+                      <div className="mt-4 w-full max-w-md mx-auto">
+                        <ProgressBar
+                          value={uploadProgress.current}
+                          max={uploadProgress.total}
+                          showLabel
+                          label={uploadProgress.currentFile
+                            ? `Uploading: ${uploadProgress.currentFile} (${uploadProgress.current + 1}/${uploadProgress.total})`
+                            : `Processing files (${uploadProgress.current}/${uploadProgress.total})`}
+                          size="md"
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </TabsContent>
+                </TabsContent>
 
-            <TabsContent value="text" className="space-y-4">
-              <Textarea
-                value={uploadText}
-                onChange={(e) => setUploadText(e.target.value)}
-                placeholder="Paste your writing sample here..."
-                className="min-h-[200px]"
-                disabled={loading}
-              />
+                <TabsContent value="text" className="space-y-4">
+                  <Textarea
+                    value={uploadText}
+                    onChange={(e) => setUploadText(e.target.value)}
+                    placeholder="Paste your writing sample here..."
+                    className="min-h-[200px]"
+                    disabled={loading}
+                  />
+                  <Button
+                    onClick={handleTextUpload}
+                    disabled={loading || !uploadText.trim()}
+                    isLoading={loading}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload Text
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+
+          {/* Generate Fingerprint */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Fingerprint</CardTitle>
+              <CardDescription>
+                Generate your fingerprint from uploaded writing samples. You need at least one sample.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <Button
-                onClick={handleTextUpload}
-                disabled={loading || !uploadText.trim()}
+                onClick={handleGenerateFingerprint}
+                disabled={loading || !status || status.sample_count === 0}
                 isLoading={loading}
                 className="w-full"
+                size="lg"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Text
+                <Sparkles className="h-5 w-5 mr-2" />
+                Generate Fingerprint
               </Button>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              {status && status.sample_count === 0 && (
+                <Alert variant="warning" className="mt-4">
+                  Please upload at least one writing sample before generating a fingerprint.
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Generate Fingerprint */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Generate Fingerprint</CardTitle>
-          <CardDescription>
-            Generate your fingerprint from uploaded writing samples. You need at least one sample.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button
-            onClick={handleGenerateFingerprint}
-            disabled={loading || !status || status.sample_count === 0}
-            isLoading={loading}
-            className="w-full"
-            size="lg"
-          >
-            <Sparkles className="h-5 w-5 mr-2" />
-            Generate Fingerprint
-          </Button>
-          {status && status.sample_count === 0 && (
-            <Alert variant="warning" className="mt-4">
-              Please upload at least one writing sample before generating a fingerprint.
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Fine-tune Section */}
-      {status?.has_fingerprint && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Fine-tune Fingerprint</CardTitle>
-            <CardDescription>
-              Add more writing samples to improve your fingerprint accuracy and adapt to your evolving writing style.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {fineTuneTexts.map((text, index) => (
-              <div key={index} className="flex gap-2">
-                <Textarea
-                  value={text}
-                  onChange={(e) => updateFineTuneText(index, e.target.value)}
-                  placeholder="Enter a new writing sample..."
-                  className="flex-1 min-h-[100px]"
-                  disabled={loading}
-                />
-                {fineTuneTexts.length > 1 && (
+          {/* Fine-tune Section */}
+          {status?.has_fingerprint && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Fine-tune Fingerprint</CardTitle>
+                <CardDescription>
+                  Add more writing samples to improve your fingerprint accuracy and adapt to your evolving writing style.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {fineTuneTexts.map((text, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Textarea
+                      value={text}
+                      onChange={(e) => updateFineTuneText(index, e.target.value)}
+                      placeholder="Enter a new writing sample..."
+                      className="flex-1 min-h-[100px]"
+                      disabled={loading}
+                    />
+                    {fineTuneTexts.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFineTuneField(index)}
+                        disabled={loading}
+                        className="self-start"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFineTuneField(index)}
+                    variant="outline"
+                    onClick={addFineTuneField}
                     disabled={loading}
-                    className="self-start"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Another Sample
                   </Button>
-                )}
-              </div>
-            ))}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={addFineTuneField}
-                disabled={loading}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Another Sample
-              </Button>
-              <Button
-                onClick={handleFineTune}
-                disabled={loading || fineTuneTexts.every((t) => !t.trim())}
-                isLoading={loading}
-                className="flex-1"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Fine-tune Fingerprint
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  <Button
+                    onClick={handleFineTune}
+                    disabled={loading || fineTuneTexts.every((t) => !t.trim())}
+                    isLoading={loading}
+                    className="flex-1"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Fine-tune Fingerprint
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Enhanced Corpus Tab */}
+        <TabsContent value="corpus" className="mt-6">
+          <CorpusBuilder />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
