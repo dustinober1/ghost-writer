@@ -23,10 +23,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Enterprise API (API)
 
-- [ ] **API-01**: Developer can access REST API with OpenAPI documentation
-- [ ] **API-02**: Developer can authenticate using API keys
-- [ ] **API-03**: System enforces tiered rate limiting (free/paid quotas)
-- [ ] **API-04**: System provides usage metrics and dashboard
+- [x] **API-01**: Developer can access REST API with OpenAPI documentation
+- [x] **API-02**: Developer can authenticate using API keys
+- [x] **API-03**: System enforces tiered rate limiting (free/paid quotas)
+- [x] **API-04**: System provides usage metrics and dashboard
 
 ### Multi-Model Ensemble (ENSEMBLE)
 
@@ -103,10 +103,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BATCH-02 | Phase 2 | Complete |
 | BATCH-03 | Phase 2 | Complete |
 | BATCH-04 | Phase 2 | Complete |
-| API-01 | Phase 3 | Pending |
-| API-02 | Phase 3 | Pending |
-| API-03 | Phase 3 | Pending |
-| API-04 | Phase 3 | Pending |
+| API-01 | Phase 3 | Complete |
+| API-02 | Phase 3 | Complete |
+| API-03 | Phase 3 | Complete |
+| API-04 | Phase 3 | Complete |
 | ENSEMBLE-01 | Phase 4 | Pending |
 | ENSEMBLE-02 | Phase 4 | Pending |
 | ENSEMBLE-03 | Phase 4 | Pending |
