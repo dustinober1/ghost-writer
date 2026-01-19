@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 7 (in progress)
-Plan: 1 of 4 in Phase 5
-Status: Phase 5 Plan 1 Complete - Corpus Fingerprint Data Models
-Last activity: 2026-01-19 — Completed 05-01-PLAN.md (Corpus-Based Fingerprint Data Models)
+Plan: 3 of 4 in Phase 5
+Status: Phase 5 Plan 3 Complete - Time-Weighted Training and Similarity Calculation
+Last activity: 2026-01-19 — Completed 05-03-PLAN.md (Time-Weighted Training and Similarity Calculation)
 
-Progress: [███████████████░░░░░░░░░░░░] 57% (16/28 total plans complete)
+Progress: [████████████████░░░░░░░░░░░] 61% (17/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: 9 minutes
 - Total execution time: 2.5 hours
 
@@ -31,14 +31,14 @@ Progress: [███████████████░░░░░░░░
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
 | 4. Multi-Model Ensemble | 3 | 3 | 10 minutes |
-| 5. Enhanced Fingerprinting | 4 | 1 | 5 minutes |
+| 5. Enhanced Fingerprinting | 4 | 3 | 5 minutes |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min)
-- Trend: Phase 5 started with corpus-based fingerprint data models
-- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder
+- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min), 05-03 (3 min)
+- Trend: Phase 5 progressing through enhanced fingerprinting
+- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, TimeWeightedFingerprintBuilder, FingerprintComparator
 
 *Updated after each phase completion*
 
@@ -162,6 +162,15 @@ Recent decisions affecting current work:
 5. **JSON storage for features and feature_statistics** - Flexibility without schema migrations, supports 27-element feature arrays
 6. **written_at timestamp separate from created_at** - Enables time-weighted aggregation based on original writing date vs. database insertion
 
+**From Plan 05-03 (Time-Weighted Training and Similarity Calculation):**
+1. **EMA alpha=0.3** - Balances recency sensitivity with stability for writing style evolution tracking
+2. **Lambda = -ln(alpha) for recency weight calculation** - Ensures mathematical consistency between EMA smoothing and exponential time decay
+3. **95% confidence level with z-score=1.96** - Standard statistical confidence interval for similarity uncertainty quantification
+4. **Similarity thresholds: HIGH=0.85, MEDIUM=0.70, LOW=0.50** - Based on authorship verification research for reliable classification
+5. **Graceful degradation when scipy/sklearn unavailable** - Uses fallback calculations and pre-computed z-scores for robustness
+6. **Top 5 feature deviations for interpretability** - Highlights most different stylometric features for user understanding
+7. **TimeWeightedFingerprintBuilder for incremental updates** - Supports streaming scenarios where samples arrive over time
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -200,8 +209,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 21:57 UTC
-Stopped at: Completed 05-01-PLAN.md (Corpus-Based Fingerprint Data Models)
+Last session: 2026-01-19 22:01 UTC
+Stopped at: Completed 05-03-PLAN.md (Time-Weighted Training and Similarity Calculation)
 Resume file: None
 
 **Infrastructure Note:**
@@ -247,3 +256,11 @@ Resume file: None
 - **NEW:** Pydantic schemas: FingerprintSampleCreate, CorpusStatus, EnhancedFingerprintResponse
 - **NEW:** Three aggregation methods: time_weighted (EMA), average, source_weighted
 - **NEW:** Welford's online algorithm for feature statistics (mean, std, variance)
+- **NEW:** TimeWeightedFingerprintBuilder at backend/app/ml/fingerprint/time_weighted_trainer.py (370 lines)
+- **NEW:** EMA update formula: new_ema = (1-alpha)*old_ema + alpha*new_sample
+- **NEW:** Recency weight calculation: weight = exp(-lambda*age), lambda = -ln(alpha)
+- **NEW:** FingerprintComparator at backend/app/ml/fingerprint/similarity_calculator.py (396 lines)
+- **NEW:** Similarity thresholds: HIGH=0.85, MEDIUM=0.70, LOW=0.50
+- **NEW:** Confidence interval calculation: CI = z_score * SEM, SEM = sqrt(mean_variance / n_features)
+- **NEW:** Top 5 feature deviations with normalization by std
+- **NEW:** Module exports from app.ml.fingerprint: TimeWeightedFingerprintBuilder, FingerprintComparator, compare_with_confidence
