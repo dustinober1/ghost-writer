@@ -147,15 +147,21 @@ class AnalysisService:
             end_index = start_index + len(segment)
             current_index = end_index
 
-            segment_results.append({
+            # Build segment dict
+            segment_dict = {
                 "text": segment,
                 "ai_probability": float(ai_probability),
                 "start_index": start_index,
                 "end_index": end_index,
                 "confidence_level": self._calculate_confidence_level(float(ai_probability)),
                 "feature_attribution": feature_attribution
-            })
-        
+            }
+
+            # Generate sentence-level explanation
+            segment_dict["sentence_explanation"] = self.generate_sentence_explanation(segment_dict)
+
+            segment_results.append(segment_dict)
+
         # Calculate overall AI probability
         if segment_results:
             overall_ai_probability = np.mean([s["ai_probability"] for s in segment_results])
@@ -584,6 +590,131 @@ class AnalysisService:
             )
 
         return explanation
+
+    def generate_sentence_explanation(self, segment: Dict) -> str:
+        """
+        Generate sentence-level explanation for a specific segment.
+
+        Creates a 1-2 sentence natural language explanation that references
+        specific features and their values, with different styles based on
+        confidence level.
+
+        Args:
+            segment: Segment dictionary with ai_probability, confidence_level, feature_attribution
+
+        Returns:
+            Natural language explanation string (1-2 sentences)
+        """
+        ai_prob = segment.get("ai_probability", 0.5)
+        confidence_level = segment.get("confidence_level", ConfidenceLevel.MEDIUM)
+        feature_attribution = segment.get("feature_attribution", [])
+
+        # Get top 2 features for explanation
+        top_features = feature_attribution[:2] if len(feature_attribution) >= 2 else feature_attribution
+
+        if not top_features:
+            # No feature attribution available
+            if confidence_level == ConfidenceLevel.HIGH:
+                return "This sentence is flagged as highly likely to be AI-generated based on overall patterns."
+            elif confidence_level == ConfidenceLevel.MEDIUM:
+                return "This sentence shows some AI-like patterns but is less certain."
+            else:
+                return "This sentence appears primarily human-written."
+
+        # Build feature descriptions
+        feature_descs = []
+        for feature in top_features:
+            feature_name = feature.get("feature_name", "")
+            interpretation = feature.get("interpretation", "")
+            feature_descs.append(interpretation)
+
+        # Build explanation based on confidence level
+        if confidence_level == ConfidenceLevel.HIGH:
+            # HIGH confidence
+            explanation = "This sentence is flagged as highly likely to be AI-generated. "
+            if feature_descs:
+                explanation += f"Primary indicators: {', '.join(feature_descs)}. "
+            explanation += self._get_pattern_description(feature_attribution)
+        elif confidence_level == ConfidenceLevel.MEDIUM:
+            # MEDIUM confidence
+            explanation = "This sentence shows some AI-like patterns but is less certain. "
+            if feature_descs:
+                explanation += f"Contributing factors: {', '.join(feature_descs)}. "
+            suggestion = self._get_humanizing_suggestion(feature_attribution)
+            if suggestion:
+                explanation += f" {suggestion}"
+        else:
+            # LOW confidence (human-like)
+            explanation = "This sentence appears primarily human-written. "
+            if feature_descs:
+                explanation += f"Human-like indicators: {', '.join(feature_descs)}. "
+            explanation += "No strong AI patterns detected."
+
+        return explanation
+
+    def _get_pattern_description(self, feature_attribution: List[Dict]) -> str:
+        """
+        Generate pattern description based on top features.
+
+        Args:
+            feature_attribution: List of feature attribution dicts
+
+        Returns:
+            Pattern description string
+        """
+        if not feature_attribution:
+            return ""
+
+        # Check for common AI patterns
+        patterns = []
+
+        for feature in feature_attribution[:3]:
+            interpretation = feature.get("interpretation", "").lower()
+            feature_name = feature.get("feature_name", "").lower()
+
+            # Pattern combinations
+            if "burstiness" in feature_name and "low" in interpretation:
+                patterns.append("uniform sentence structure")
+            elif "perplexity" in feature_name and "low" in interpretation:
+                patterns.append("predictable vocabulary")
+            elif "unique" in feature_name and "low" in interpretation:
+                patterns.append("repetitive word patterns")
+
+        if patterns:
+            if len(patterns) == 1:
+                return f"The sentence shows {patterns[0]}."
+            elif len(patterns) == 2:
+                return f"The sentence shows {patterns[0]} and {patterns[1]}."
+            else:
+                return f"The sentence shows {', '.join(patterns[:-1])}, and {patterns[-1]}."
+
+        return "The sentence exhibits multiple AI-like characteristics."
+
+    def _get_humanizing_suggestion(self, feature_attribution: List[Dict]) -> str:
+        """
+        Generate suggestion for making text more human-like.
+
+        Args:
+            feature_attribution: List of feature attribution dicts
+
+        Returns:
+            Suggestion string
+        """
+        if not feature_attribution:
+            return ""
+
+        for feature in feature_attribution[:3]:
+            interpretation = feature.get("interpretation", "").lower()
+            feature_name = feature.get("feature_name", "").lower()
+
+            if "burstiness" in feature_name and "low" in interpretation:
+                return "May benefit from varying sentence length."
+            elif "unique" in feature_name and "low" in interpretation:
+                return "May benefit from using more diverse vocabulary."
+            elif "coherence" in feature_name and "high" in interpretation:
+                return "May benefit from adding more topic transitions."
+
+        return "May benefit from more natural variation in structure."
 
     def _analyze_document_feature_patterns(self, segments: List[Dict]) -> str:
         """
