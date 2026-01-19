@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.database import User, WritingSample, Fingerprint, FingerprintSample, EnhancedFingerprint
 from app.ml.fingerprint import generate_fingerprint, update_fingerprint
 from app.ml.fingerprint.corpus_builder import FingerprintCorpusBuilder
+from app.ml.fingerprint.similarity_calculator import FingerprintComparator
 from app.ml.feature_extraction import extract_feature_vector
 from datetime import datetime
 
@@ -427,6 +428,144 @@ class FingerprintService:
             db.commit()
             db.refresh(enhanced_fingerprint)
             return enhanced_fingerprint
+
+    # ============= Fingerprint Comparison Methods =============
+
+    def compare_text_to_fingerprint(
+        self,
+        db: Session,
+        user_id: int,
+        text: str,
+        use_enhanced: bool = True
+    ) -> Dict:
+        """
+        Compare text to user's fingerprint with confidence intervals.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            text: Text content to compare
+            use_enhanced: Use enhanced fingerprint if available (default True)
+
+        Returns:
+            Dictionary with similarity, confidence_interval, match_level,
+            feature_deviations, method_used, corpus_size
+
+        Raises:
+            ValueError: If no fingerprint found
+        """
+        # Get enhanced fingerprint if requested
+        fingerprint_dict = None
+        fingerprint_stats = None
+        method_used = "basic"
+        corpus_size = None
+
+        if use_enhanced:
+            enhanced_fp = db.query(EnhancedFingerprint).filter(
+                EnhancedFingerprint.user_id == user_id
+            ).first()
+
+            if enhanced_fp:
+                fingerprint_dict = {
+                    "feature_vector": enhanced_fp.feature_vector,
+                    "corpus_size": enhanced_fp.corpus_size,
+                    "method": enhanced_fp.method
+                }
+                fingerprint_stats = enhanced_fp.feature_statistics
+                method_used = f"{enhanced_fp.method}_ema" if enhanced_fp.method == "time_weighted" else enhanced_fp.method
+                corpus_size = enhanced_fp.corpus_size
+
+        # Fall back to basic fingerprint
+        if fingerprint_dict is None:
+            basic_fp = self.get_user_fingerprint(db, user_id)
+            if not basic_fp:
+                raise ValueError(
+                    "No fingerprint found. Please generate a fingerprint first."
+                )
+
+            fingerprint_dict = {
+                "feature_vector": basic_fp.feature_vector,
+                "model_version": basic_fp.model_version
+            }
+            method_used = "basic"
+
+        # Extract features from text
+        text_features = extract_feature_vector(text)
+
+        # Compare using FingerprintComparator
+        comparator = FingerprintComparator(confidence_level=0.95)
+        comparison_result = comparator.compare_with_confidence(
+            text_features, fingerprint_dict, fingerprint_stats
+        )
+
+        # Format response
+        return {
+            "similarity": comparison_result["similarity"],
+            "confidence_interval": comparison_result["confidence_interval"],
+            "match_level": comparison_result["match_level"],
+            "feature_deviations": comparison_result["feature_deviations"],
+            "method_used": method_used,
+            "corpus_size": corpus_size
+        }
+
+    def get_fingerprint_profile(
+        self,
+        db: Session,
+        user_id: int
+    ) -> Dict:
+        """
+        Get user's fingerprint profile with metadata.
+
+        Args:
+            db: Database session
+            user_id: User ID
+
+        Returns:
+            Dictionary with has_fingerprint, corpus_size, method, alpha,
+            source_distribution, created_at, updated_at, feature_count
+        """
+        # Try enhanced fingerprint first
+        enhanced_fp = db.query(EnhancedFingerprint).filter(
+            EnhancedFingerprint.user_id == user_id
+        ).first()
+
+        if enhanced_fp:
+            return {
+                "has_fingerprint": True,
+                "corpus_size": enhanced_fp.corpus_size,
+                "method": enhanced_fp.method,
+                "alpha": enhanced_fp.alpha,
+                "source_distribution": enhanced_fp.source_distribution,
+                "created_at": enhanced_fp.created_at,
+                "updated_at": enhanced_fp.updated_at,
+                "feature_count": 27
+            }
+
+        # Fall back to basic fingerprint
+        basic_fp = self.get_user_fingerprint(db, user_id)
+        if basic_fp:
+            return {
+                "has_fingerprint": True,
+                "corpus_size": None,
+                "method": basic_fp.model_version,
+                "alpha": None,
+                "source_distribution": None,
+                "created_at": basic_fp.created_at,
+                "updated_at": basic_fp.updated_at,
+                "feature_count": 27
+            }
+
+        # No fingerprint found
+        return {
+            "has_fingerprint": False,
+            "corpus_size": None,
+            "method": None,
+            "alpha": None,
+            "source_distribution": None,
+            "created_at": None,
+            "updated_at": None,
+            "feature_count": 27
+        }
 
 
 # Global service instance
