@@ -9,12 +9,19 @@ import { ArrowLeft, Download, Share2, Info, TrendingUp, TrendingDown, Minus } fr
 import { useToast } from '../../contexts/ToastContext';
 import { cn } from '../../utils/cn';
 
+interface FeatureAttribution {
+  feature_name: string;
+  importance: number;
+  interpretation: string;
+}
+
 interface TextSegment {
   text: string;
   ai_probability: number;
   start_index: number;
   end_index: number;
   confidence_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  feature_attribution?: FeatureAttribution[];
 }
 
 interface HeatMapData {
@@ -114,6 +121,22 @@ export default function HeatMap() {
       default:
         return '';
     }
+  };
+
+  const getImportanceColor = (importance: number): string => {
+    if (importance > 0.7) {
+      return 'bg-red-500';
+    } else if (importance > 0.4) {
+      return 'bg-yellow-500';
+    } else {
+      return 'bg-green-500';
+    }
+  };
+
+  const getImportanceVariant = (importance: number): 'high' | 'medium' | 'low' => {
+    if (importance > 0.7) return 'high';
+    if (importance > 0.4) return 'medium';
+    return 'low';
   };
 
   const handleExport = (format: 'json' | 'csv' | 'pdf') => {
@@ -468,6 +491,54 @@ export default function HeatMap() {
               </CardContent>
             </Card>
           )}
+
+          {/* Why This Flag? - Feature Attribution */}
+          {selectedSegment && selectedSegment.feature_attribution && selectedSegment.feature_attribution.length > 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Why This Flag?</CardTitle>
+                <CardDescription>Top contributing features</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {selectedSegment.feature_attribution.map((feature, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {feature.feature_name}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {(feature.importance * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {/* Importance Bar */}
+                    <div className="relative w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          'h-full transition-all duration-300 rounded-full',
+                          getImportanceColor(feature.importance)
+                        )}
+                        style={{ width: `${feature.importance * 100}%` }}
+                        aria-label={`${feature.feature_name} importance: ${(feature.importance * 100).toFixed(0)}%`}
+                      />
+                    </div>
+                    {/* Interpretation */}
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+                      {feature.interpretation}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : selectedSegment ? (
+            <Card>
+              <CardContent className="text-center py-6">
+                <Info className="h-8 w-8 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Feature attribution not available for this segment
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
 
           {/* Statistics */}
           <Card>
