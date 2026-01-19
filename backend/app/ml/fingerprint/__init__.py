@@ -13,12 +13,16 @@ This package provides multiple approaches to building and comparing writing fing
 3. **FingerprintComparator** - Similarity comparison with confidence intervals
    for statistically reliable authorship verification decisions.
 
+4. **StyleDriftDetector** - Z-score based drift detection for identifying significant
+   writing style changes that may indicate AI assistance.
+
 Usage:
     ```python
     from app.ml.fingerprint import (
         FingerprintCorpusBuilder,
         TimeWeightedFingerprintBuilder,
-        FingerprintComparator
+        FingerprintComparator,
+        StyleDriftDetector
     )
 
     # Corpus-based approach (batch)
@@ -43,6 +47,13 @@ Usage:
         fingerprint_stats
     )
     print(f"Similarity: {result['similarity']} ± {result['confidence_interval']}")
+
+    # Drift detection
+    detector = StyleDriftDetector(drift_threshold=2.0, alert_threshold=3.0)
+    detector.establish_baseline([0.8, 0.82, 0.85])
+    drift_result = detector.check_drift(0.5, feature_deviations)
+    if drift_result['drift_detected']:
+        print(f"Drift detected: {drift_result['severity']}")
     ```
 """
 
@@ -66,6 +77,11 @@ from .similarity_calculator import (
     THRESHOLD_MEDIUM_SIMILARITY,
     THRESHOLD_LOW_SIMILARITY
 )
+from .drift_detector import (
+    StyleDriftDetector,
+    establish_baseline,
+    check_drift as check_drift_with_detector
+)
 
 # Legacy functions (for backward compatibility with app.ml.fingerprint)
 from ..fingerprint import (
@@ -79,9 +95,12 @@ __all__ = [
     "FingerprintCorpusBuilder",
     "TimeWeightedFingerprintBuilder",
     "FingerprintComparator",
+    "StyleDriftDetector",
     "compare_with_confidence",
     "classify_match",
     "compute_recency_weights",
+    "establish_baseline",
+    "check_drift_with_detector",
     # Threshold constants
     "THRESHOLD_HIGH_SIMILARITY",
     "THRESHOLD_MEDIUM_SIMILARITY",
@@ -96,3 +115,5 @@ __all__ = [
 MIN_SAMPLES_FOR_FINGERPRINT = 10  # Minimum samples for valid fingerprint
 DEFAULT_ALPHA = 0.3  # Default EMA smoothing parameter
 DEFAULT_CONFIDENCE_LEVEL = 0.95  # Default confidence for intervals
+DEFAULT_DRIFT_THRESHOLD = 2.0  # Warning level (2 sigma)
+DEFAULT_ALERT_THRESHOLD = 3.0  # Alert level (3 sigma)
