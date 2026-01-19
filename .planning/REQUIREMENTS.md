@@ -107,9 +107,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-02 | Phase 3 | Complete |
 | API-03 | Phase 3 | Complete |
 | API-04 | Phase 3 | Complete |
-| ENSEMBLE-01 | Phase 4 | Pending |
-| ENSEMBLE-02 | Phase 4 | Pending |
-| ENSEMBLE-03 | Phase 4 | Pending |
+| ENSEMBLE-01 | Phase 4 | Complete |
+| ENSEMBLE-02 | Phase 4 | Complete |
+| ENSEMBLE-03 | Phase 4 | Complete |
 | PRINT-01 | Phase 5 | Pending |
 | PRINT-02 | Phase 5 | Pending |
 | PRINT-03 | Phase 5 | Pending |
