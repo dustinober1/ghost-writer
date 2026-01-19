@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-01-18)
 
 **Core value:** Reliable AI text detection with transparent explainability
-**Current focus:** Phase 3: Enterprise API
+**Current focus:** Phase 4: Multi-Model Ensemble
 
 ## Current Position
 
-Phase: 3 of 7 (complete)
-Plan: 4 of 4 in Phase 3
-Status: Phase 3 Complete - Moving to Phase 4
-Last activity: 2026-01-19 — Completed 03-04 (API Usage Dashboard)
+Phase: 4 of 7 (in progress)
+Plan: 1 of 3 in Phase 4
+Status: Plan 04-01 Complete
+Last activity: 2026-01-19 — Completed 04-01 (Multi-Model Ensemble Detector)
 
-Progress: [████████████] 43% (12/28 total plans complete)
+Progress: [████████████░░░░░░░░░░░░░░░] 46% (13/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 10 minutes
-- Total execution time: 1.9 hours
+- Total execution time: 2.1 hours
 
 **By Phase:**
 
@@ -30,15 +30,15 @@ Progress: [████████████] 43% (12/28 total plans complete
 | 1. Explainability | 4 | 4 | 15 minutes |
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
-| 4. Multi-Model Ensemble | 3 | 0 | TBD |
+| 4. Multi-Model Ensemble | 3 | 1 | 8 minutes |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min)
-- Trend: Phase 3 complete, excellent velocity on API features
-- Phase 3 delivered: API keys, rate limiting, protected docs, usage dashboard
+- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min), 04-01 (8 min)
+- Trend: Phase 4 started with ensemble detector implementation
+- Phase 4 delivered: EnsembleDetector, base detector wrappers, weight calculation, analyze_with_ensemble()
 
 *Updated after each phase completion*
 
@@ -128,6 +128,15 @@ Recent decisions affecting current work:
 4. **Confirmation before key deletion** - Prevents accidental loss of working API keys
 5. **External link to /docs** - Opens API documentation in new tab for reference while managing keys
 
+**From Plan 04-01 (Multi-Model Ensemble Detector):**
+1. **Weighted soft voting via sklearn VotingClassifier** - Standard ensemble approach using probability-based voting instead of majority voting
+2. **Default model weights: stylometric 0.4, perplexity 0.3, contrastive 0.3** - Reflects expected model reliability based on feature quality
+3. **Graceful degradation to stylometric-only when sklearn unavailable** - SKLEARN_AVAILABLE flag enables service to continue without full ensemble
+4. **Manual weighted average fallback** - When VotingClassifier initialization fails, manual calculation maintains ensemble functionality
+5. **Ensemble results include per-model probabilities** - Transparency for debugging and analysis; shows individual model contributions
+6. **analyze_with_ensemble() separate from analyze_text()** - New method preserves backward compatibility while adding ensemble capabilities
+7. **sklearn-compatible detector wrappers** - Each detector implements fit/predict_proba/predict interface for VotingClassifier integration
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -166,8 +175,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 20:31 UTC
-Stopped at: Completed 03-04-PLAN.md (API Usage Dashboard)
+Last session: 2026-01-19 20:39 UTC
+Stopped at: Completed 04-01-PLAN.md (Multi-Model Ensemble Detector)
 Resume file: None
 
 **Infrastructure Note:**
@@ -191,3 +200,9 @@ Resume file: None
 - **NEW:** apiKeysAPI and usageAPI functions in frontend/src/services/api.ts
 - **NEW:** Self-service API key creation with one-time key display modal
 - **NEW:** Usage statistics with progress bars for daily and per-minute limits
+- **NEW:** Ensemble module at backend/app/ml/ensemble/ with multi-model detection
+- **NEW:** EnsembleDetector class with sklearn VotingClassifier and soft voting
+- **NEW:** StylometricDetector, PerplexityDetector, ContrastiveDetectorWrapper sklearn-compatible classes
+- **NEW:** calculate_weights_from_accuracy() utility for ensemble weight normalization
+- **NEW:** analyze_with_ensemble() method returning per-model and ensemble probabilities
+- **NEW:** EnsembleResult and EnsembleAnalysisRequest schemas for API responses
