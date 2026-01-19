@@ -114,7 +114,7 @@ services:
       redis:
         condition: service_healthy
       ollama:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - ./backend:/app
       - ml_models:/app/ml_models
@@ -154,7 +154,7 @@ services:
       redis:
         condition: service_healthy
       ollama:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - ./backend:/app
       - ml_models:/app/ml_models
