@@ -51,6 +51,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
         
         # Remove server header (optional, but good practice)
-        response.headers.pop("server", None)
+        # MutableHeaders doesn't have pop(), use del with try/except
+        try:
+            del response.headers["server"]
+        except KeyError:
+            pass
         
         return response
