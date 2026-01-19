@@ -18,8 +18,8 @@ router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 @router.post("/analyze", response_model=AnalysisResponse)
 @analysis_rate_limit
 def analyze_text(
-    request: AnalysisRequest,
-    http_request: Request,
+    body: AnalysisRequest,
+    request: Request,
     current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
@@ -33,8 +33,8 @@ def analyze_text(
     """
     try:
         # Validate and sanitize input
-        validate_text_length(request.text)
-        sanitized_text = sanitize_text(request.text, max_length=100000)
+        validate_text_length(body.text)
+        sanitized_text = sanitize_text(body.text, max_length=100000)
 
         analysis_service = get_analysis_service()
 
@@ -52,7 +52,7 @@ def analyze_text(
         # Analyze text
         result = analysis_service.analyze_text(
             text=sanitized_text,
-            granularity=request.granularity,
+            granularity=body.granularity,
             user_fingerprint=fingerprint_dict,
         )
 
