@@ -7,14 +7,16 @@ from enum import Enum
 # Confidence Level Enum
 class ConfidenceLevel(str, Enum):
     """Confidence level for AI probability categorization"""
-    HIGH = "HIGH"      # > 0.7
+
+    HIGH = "HIGH"  # > 0.7
     MEDIUM = "MEDIUM"  # 0.4 - 0.7
-    LOW = "LOW"        # < 0.4
+    LOW = "LOW"  # < 0.4
 
 
 # Pattern Type Enum
 class PatternType(str, Enum):
     """Type of overused pattern detected"""
+
     REPEATED_PHRASE = "repeated_phrase"
     SENTENCE_START = "sentence_start"
     WORD_REPETITION = "word_repetition"
@@ -23,9 +25,29 @@ class PatternType(str, Enum):
 # Pattern Severity Enum
 class PatternSeverity(str, Enum):
     """Severity level of overused pattern"""
+
     HIGH = "HIGH"
     MEDIUM = "MEDIUM"
     LOW = "LOW"
+
+
+# Batch status enums
+class BatchJobStatus(str, Enum):
+    """Status of a batch analysis job"""
+
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
+
+class BatchDocumentStatus(str, Enum):
+    """Status of a document within a batch job"""
+
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 
 # User Schemas
@@ -34,7 +56,9 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=8, max_length=1000, description="Password (8-1000 characters)")
+    password: str = Field(
+        ..., min_length=8, max_length=1000, description="Password (8-1000 characters)"
+    )
 
 
 class UserResponse(UserBase):
@@ -70,9 +94,10 @@ class WritingSampleResponse(WritingSampleBase):
 class FingerprintBase(BaseModel):
     feature_vector: List[float]
     model_version: str
-    
+
     class Config:
         protected_namespaces = ()
+        from_attributes = True
 
 
 class FingerprintResponse(FingerprintBase):
@@ -80,9 +105,6 @@ class FingerprintResponse(FingerprintBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class FingerprintStatus(BaseModel):
@@ -94,6 +116,7 @@ class FingerprintStatus(BaseModel):
 # Analysis Schemas
 class FeatureAttribution(BaseModel):
     """Individual feature attribution for explaining AI detection"""
+
     feature_name: str
     importance: float  # 0-1 normalized importance score
     interpretation: str  # Human-readable explanation
@@ -101,13 +124,25 @@ class FeatureAttribution(BaseModel):
 
 class OverusedPattern(BaseModel):
     """Overused pattern detected in text"""
+
     pattern_type: PatternType
     pattern: str  # The actual repeated text
-    count: int = Field(..., ge=2, description="Number of occurrences (must be at least 2)")
-    locations: List[int] = Field(..., min_items=1, description="Start indices in text where pattern occurs")
+    count: int = Field(
+        ..., ge=2, description="Number of occurrences (must be at least 2)"
+    )
+    locations: List[int] = Field(
+        ..., min_items=1, description="Start indices in text where pattern occurs"
+    )
     severity: PatternSeverity
-    percentage: Optional[float] = Field(None, ge=0, le=1, description="Percentage of total (for sentence starts/word freq)")
-    examples: Optional[List[str]] = Field(None, description="Sample occurrences of the pattern")
+    percentage: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Percentage of total (for sentence starts/word freq)",
+    )
+    examples: Optional[List[str]] = Field(
+        None, description="Sample occurrences of the pattern"
+    )
 
 
 class TextSegment(BaseModel):
@@ -116,16 +151,26 @@ class TextSegment(BaseModel):
     start_index: int
     end_index: int
     confidence_level: ConfidenceLevel
-    feature_attribution: Optional[List[FeatureAttribution]] = None  # Top 5 contributing features
-    sentence_explanation: Optional[str] = None  # Natural language explanation for this segment
+    feature_attribution: Optional[List[FeatureAttribution]] = (
+        None  # Top 5 contributing features
+    )
+    sentence_explanation: Optional[str] = (
+        None  # Natural language explanation for this segment
+    )
 
 
 class HeatMapData(BaseModel):
     segments: List[TextSegment]
     overall_ai_probability: float
-    confidence_distribution: Optional[Dict[str, int]] = None  # {"HIGH": count, "MEDIUM": count, "LOW": count}
-    overused_patterns: Optional[List[OverusedPattern]] = None  # Detected overused patterns
-    document_explanation: Optional[str] = None  # Natural language explanation for overall document
+    confidence_distribution: Optional[Dict[str, int]] = (
+        None  # {"HIGH": count, "MEDIUM": count, "LOW": count}
+    )
+    overused_patterns: Optional[List[OverusedPattern]] = (
+        None  # Detected overused patterns
+    )
+    document_explanation: Optional[str] = (
+        None  # Natural language explanation for overall document
+    )
 
 
 class AnalysisRequest(BaseModel):
@@ -136,6 +181,64 @@ class AnalysisRequest(BaseModel):
 class AnalysisResponse(BaseModel):
     heat_map_data: HeatMapData
     analysis_id: int
+    created_at: datetime
+
+
+# Batch Schemas
+class BatchUploadResponse(BaseModel):
+    job_id: int
+    status: BatchJobStatus
+
+
+class BatchDocumentSummary(BaseModel):
+    id: int
+    filename: str
+    word_count: int
+    ai_probability: Optional[float] = None
+    confidence_level: Optional[ConfidenceLevel] = None
+    cluster_id: Optional[int] = None
+    status: BatchDocumentStatus
+
+
+class BatchClusterSummary(BaseModel):
+    cluster_id: int
+    document_count: int
+    avg_ai_probability: Optional[float] = None
+
+
+class BatchJobStatusResponse(BaseModel):
+    job_id: int
+    status: BatchJobStatus
+    total_documents: int
+    processed_documents: int
+    granularity: str
+    created_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+    progress: float
+
+
+class BatchResultsResponse(BaseModel):
+    job: BatchJobStatusResponse
+    documents: List[BatchDocumentSummary]
+    clusters: List[BatchClusterSummary]
+    similarity_matrix: Optional[List[List[float]]] = None
+
+
+class BatchDocumentDetail(BaseModel):
+    id: int
+    filename: str
+    source_type: str
+    text_content: str
+    word_count: int
+    status: BatchDocumentStatus
+    ai_probability: Optional[float] = None
+    confidence_distribution: Optional[Dict[str, int]] = None
+    heat_map_data: Optional[HeatMapData] = None
+    embedding: Optional[List[float]] = None
+    cluster_id: Optional[int] = None
+    error_message: Optional[str] = None
     created_at: datetime
 
 
