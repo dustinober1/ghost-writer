@@ -1,0 +1,155 @@
+/* Batch Results Component Styles */
+
+.batch-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.cluster-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cluster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.cluster-card {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  transition: all 0.15s ease;
+}
+
+.cluster-card.dark {
+  border-color: #374151;
+}
+
+.cluster-card:hover {
+  border-color: #4f46e5;
+}
+
+.cluster-card--selected {
+  border-color: #4f46e5;
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+.cluster-card--selected.dark {
+  background-color: rgba(79, 70, 229, 0.1);
+}
+
+.similarity-heatmap {
+  overflow-x: auto;
+}
+
+.heatmap-cell {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 500;
+  transition: transform 0.1s ease;
+}
+
+.heatmap-cell:hover {
+  transform: scale(1.1);
+  z-index: 10;
+}
+
+.heatmap-row-label {
+  width: 1.5rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: #6b7280;
+  padding-right: 0.5rem;
+}
+
+.documents-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.documents-table th,
+.documents-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.documents-table.dark th,
+.documents-table.dark td {
+  border-bottom-color: #374151;
+}
+
+.documents-table th {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.documents-table.dark th {
+  color: #9ca3af;
+}
+
+.documents-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.documents-table.dark tr:hover {
+  background-color: #1f2937;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ai-probability-high {
+  color: #ef4444;
+}
+
+.ai-probability-medium {
+  color: #f59e0b;
+}
+
+.ai-probability-low {
+  color: #22c55e;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cluster-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .documents-table {
+    font-size: 0.875rem;
+  }
+
+  .documents-table th,
+  .documents-table td {
+    padding: 0.5rem;
+  }
+}

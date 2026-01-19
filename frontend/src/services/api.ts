@@ -186,8 +186,54 @@ export const analyticsAPI = {
     if (search) params.append('search', search);
     if (minProbability !== undefined) params.append('min_probability', minProbability.toString());
     if (maxProbability !== undefined) params.append('max_probability', maxProbability.toString());
-    
+
     const response = await api.get(`/api/analytics/history?${params.toString()}`);
+    return response.data;
+  },
+};
+
+// Batch Analysis API
+export const batchAPI = {
+  uploadBatch: async (files: File[] | FileList, granularity: 'sentence' | 'paragraph' = 'sentence') => {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append('files', files[i]);
+    }
+    formData.append('granularity', granularity);
+    const response = await api.post('/api/batch/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  uploadBatchZip: async (zipFile: File, granularity: 'sentence' | 'paragraph' = 'sentence') => {
+    const formData = new FormData();
+    formData.append('zip_file', zipFile);
+    formData.append('granularity', granularity);
+    const response = await api.post('/api/batch/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+  getBatchStatus: async (jobId: number) => {
+    const response = await api.get(`/api/batch/${jobId}/status`);
+    return response.data;
+  },
+  getBatchResults: async (jobId: number) => {
+    const response = await api.get(`/api/batch/${jobId}/results`);
+    return response.data;
+  },
+  exportBatch: async (jobId: number, format: 'csv' | 'json' = 'csv') => {
+    const response = await api.get(`/api/batch/${jobId}/export?format=${format}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+  listBatchJobs: async (skip: number = 0, limit: number = 50) => {
+    const response = await api.get(`/api/batch/jobs?skip=${skip}&limit=${limit}`);
+    return response.data;
+  },
+  getDocumentDetail: async (jobId: number, documentId: number) => {
+    const response = await api.get(`/api/batch/${jobId}/documents/${documentId}`);
     return response.data;
   },
 };

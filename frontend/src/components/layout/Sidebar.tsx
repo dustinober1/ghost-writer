@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, User, PenTool, History, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FileText, User, PenTool, History, Menu, X, Layers } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
@@ -13,6 +13,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/analyze', label: 'Text Analysis', icon: FileText },
+  { path: '/batch', label: 'Batch Analysis', icon: Layers },
   { path: '/history', label: 'History', icon: History },
   { path: '/profile', label: 'Profile & Fingerprint', icon: User },
   { path: '/rewrite', label: 'Style Rewriting', icon: PenTool },

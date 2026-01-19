@@ -19,6 +19,8 @@ const RewriteInterface = lazy(() => import('./components/RewriteInterface/Rewrit
 const Login = lazy(() => import('./components/Login/Login'));
 const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 const History = lazy(() => import('./components/Dashboard/History'));
+const BatchAnalysis = lazy(() => import('./components/BatchAnalysis/BatchAnalysis'));
+const BatchResults = lazy(() => import('./components/BatchResults/BatchResults'));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -155,6 +157,30 @@ function AnimatedRoutes() {
                   isAuthenticated ? (
                     <Container className="py-8">
                       <RewriteInterface />
+                    </Container>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/batch"
+                element={
+                  isAuthenticated ? (
+                    <Container className="py-8">
+                      <BatchAnalysis />
+                    </Container>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/batch/:jobId"
+                element={
+                  isAuthenticated ? (
+                    <Container className="py-8">
+                      <BatchResults />
                     </Container>
                   ) : (
                     <Navigate to="/login" replace />
