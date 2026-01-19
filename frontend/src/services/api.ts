@@ -78,6 +78,71 @@ export interface FingerprintProfile {
   feature_count: number;
 }
 
+// ============= Drift Detection Types =============
+
+export type DriftSeverity = 'warning' | 'alert' | 'none';
+
+export interface FeatureChange {
+  feature: string;
+  current_value: number;
+  baseline_value: number;
+  normalized_deviation: number;
+}
+
+export interface DriftDetectionResult {
+  drift_detected: boolean;
+  severity: DriftSeverity;
+  similarity: number;
+  baseline_mean: number;
+  z_score: number;
+  confidence_interval: [number, number];
+  changed_features: FeatureChange[];
+  timestamp?: string;
+  reason?: string;
+}
+
+export interface DriftAlert {
+  id: number;
+  severity: DriftSeverity;
+  similarity_score: number;
+  baseline_similarity: number;
+  z_score: number;
+  changed_features: FeatureChange[];
+  text_preview?: string;
+  acknowledged: boolean;
+  created_at: string;
+}
+
+export interface DriftAlertsList {
+  alerts: DriftAlert[];
+  total: number;
+  unacknowledged_count: number;
+}
+
+export interface DriftBaselineResponse {
+  status: string;
+  mean: number;
+  std: number;
+  window_size: number;
+  thresholds: {
+    drift: number;
+    alert: number;
+  };
+}
+
+export interface DriftStatus {
+  baseline_established: boolean;
+  baseline_mean: number | null;
+  baseline_std: number | null;
+  current_window_size: number;
+  thresholds: {
+    drift: number;
+    alert: number;
+  };
+  unacknowledged_alerts: number;
+  last_check: string | null;
+}
+
 // Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
@@ -374,6 +439,45 @@ export const usageAPI = {
   },
   getLimits: async () => {
     const response = await api.get('/api/limits');
+    return response.data;
+  },
+};
+
+// Drift Detection API
+export const driftAPI = {
+  // Get drift alerts for current user
+  getAlerts: async (includeAcknowledged = false): Promise<DriftAlertsList> => {
+    const response = await api.get('/api/fingerprint/drift/alerts', {
+      params: { include_acknowledged: includeAcknowledged },
+    });
+    return response.data;
+  },
+
+  // Check text for style drift
+  checkDrift: async (text: string, useEnhanced = true): Promise<DriftDetectionResult> => {
+    const response = await api.post('/api/fingerprint/drift/check', {
+      text,
+      use_enhanced: useEnhanced,
+    });
+    return response.data;
+  },
+
+  // Acknowledge an alert
+  acknowledgeAlert: async (alertId: number, updateBaseline = false): Promise<void> => {
+    await api.post(`/api/fingerprint/drift/acknowledge/${alertId}`, null, {
+      params: { update_baseline: updateBaseline },
+    });
+  },
+
+  // Establish baseline manually
+  establishBaseline: async (similarities: number[]): Promise<DriftBaselineResponse> => {
+    const response = await api.post('/api/fingerprint/drift/baseline', similarities);
+    return response.data;
+  },
+
+  // Get drift detector status
+  getStatus: async (): Promise<DriftStatus> => {
+    const response = await api.get('/api/fingerprint/drift/status');
     return response.data;
   },
 };
