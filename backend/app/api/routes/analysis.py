@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.models.database import get_db, User, AnalysisResult
@@ -6,7 +7,7 @@ from app.models.schemas import AnalysisRequest, AnalysisResponse, HeatMapData, T
 from app.services.analysis_service import get_analysis_service
 from app.services.fingerprint_service import get_fingerprint_service
 from app.utils.auth import get_current_user_optional
-from app.middleware.rate_limit import analysis_rate_limit
+from app.middleware.rate_limit import analysis_rate_limit, check_rate_limit, add_rate_limit_headers
 from app.middleware.input_sanitization import sanitize_text
 from app.middleware.audit_logging import log_analysis_event
 from app.utils.file_validation import validate_text_length
@@ -30,7 +31,25 @@ def analyze_text(
     accurate AI probability estimation.
 
     Note: In development mode, authentication is optional for testing.
+    Rate limits are enforced per user based on subscription tier.
     """
+    # Check tiered rate limit for authenticated users
+    rate_info = None
+    if current_user:
+        tier = current_user.tier if hasattr(current_user, 'tier') else "free"
+        rate_info = check_rate_limit(current_user.id, tier)
+
+        if not rate_info["allowed"]:
+            response = JSONResponse(
+                status_code=429,
+                content={
+                    "detail": "Rate limit exceeded",
+                    "error": rate_info.get("error", "day_limit_exceeded"),
+                    "reset_time": rate_info["reset_time"]
+                }
+            )
+            return add_rate_limit_headers(response, rate_info)
+
     try:
         # Validate and sanitize input
         validate_text_length(body.text)
@@ -103,11 +122,19 @@ def analyze_text(
                 ai_probability=result["overall_ai_probability"]
             )
 
-        return AnalysisResponse(
+        # Build response
+        response_data = AnalysisResponse(
             heat_map_data=heat_map_data,
             analysis_id=analysis_result.id if analysis_result else None,
             created_at=analysis_result.created_at if analysis_result else None
         )
+
+        # Add rate limit headers if user is authenticated
+        if current_user and rate_info:
+            response = JSONResponse(content=response_data.dict())
+            return add_rate_limit_headers(response, rate_info)
+
+        return response_data
 
     except ValueError as e:
         raise HTTPException(
