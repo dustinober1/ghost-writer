@@ -10,34 +10,35 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 1 of 7 (Explainability)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2025-01-19 — Completed plan 01-03 (Natural Language Explanations)
+Plan: 4 of 4 in current phase
+Status: Phase complete!
+Last activity: 2026-01-19 — Completed plan 01-04 (Overused Phrases & Patterns Detection)
 
-Progress: [███░░░░░░░░] 75% (3/4 plans complete)
+Progress: [████████░░░] 14% (4/4 phase 1 plans complete, 4/28 total plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
+- Total plans completed: 4
 - Average duration: 15 minutes
-- Total execution time: 0.75 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1. Explainability | 3 | 4 | 15 minutes |
-| 2. Batch Analysis | 0 | TBD | - |
-| 3. Enterprise API | 0 | TBD | - |
-| 4. Multi-Model Ensemble | 0 | TBD | - |
-| 5. Enhanced Fingerprinting | 0 | TBD | - |
-| 6. Style Transfer | 0 | TBD | - |
-| 7. Distribution | 0 | TBD | - |
+| Phase | Plans | Complete | Avg/Plan |
+|-------|-------|----------|----------|
+| 1. Explainability | 4 | 4 | 15 minutes |
+| 2. Batch Analysis | 5 | 0 | TBD |
+| 3. Enterprise API | 4 | 0 | TBD |
+| 4. Multi-Model Ensemble | 3 | 0 | TBD |
+| 5. Enhanced Fingerprinting | 4 | 0 | TBD |
+| 6. Style Transfer | 4 | 0 | TBD |
+| 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (10 min), 01-02 (30 min), 01-03 (4 min)
+- Last 5 plans: 01-01 (10 min), 01-02 (30 min), 01-03 (4 min), 01-04 (20 min)
 - Trend: Steady progress, infrastructure stable
+- Phase 1 complete with all explainability features delivered
 
 *Updated after each plan completion*
 
@@ -67,6 +68,14 @@ Recent decisions affecting current work:
 4. **Sentence explanation placement** - In sidebar below Segment Details (context-specific, complements "Why This Flag?" feature attribution)
 5. **Feature pattern descriptions** - 20+ stylometric feature patterns mapped to human-readable descriptions for explanations
 
+**From Plan 01-04 (Overused Phrases & Patterns Detection):**
+1. **Statistical-only pattern detection** - N-gram extraction and frequency counting instead of ML models, providing fast deterministic results without external dependencies
+2. **Three detection dimensions** - Repeated phrases (2-4 word n-grams appearing 3+ times), sentence starts (>30% threshold), word repetition (>5% threshold)
+3. **Severity tiers based on frequency** - HIGH (>=5 phrases, >=50% starts, >=10% words), MEDIUM (>=3 phrases, >=35% starts, >=7% words), LOW (minimum thresholds)
+4. **Pattern UI placement** - Below Document Explanation, visible but not competing with main AI Probability score
+5. **Dismissible pattern card** - Users can hide pattern information to reduce clutter, following progressive disclosure UX principle
+6. **Development mode authentication bypass** - DEVELOPMENT_MODE environment variable allows local testing without auth, improving developer experience
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -91,13 +100,21 @@ Recent decisions affecting current work:
 3. **Tone calibration:** HIGH confidence explanations may feel too harsh, LOW too reassuring - A/B test alternatives
 4. **Pattern localization:** Current patterns assume English grammar/style - consider i18n for future
 
+**From Plan 01-04:**
+1. **Pattern detection accuracy:** Statistical thresholds may need calibration based on real AI-generated text - monitor false positives/negatives
+2. **Performance with large documents:** Pattern detection adds computational overhead - test with documents >10k words
+3. **Pattern UI clutter:** Too many patterns may overwhelm users - consider showing only HIGH/MEDIUM severity by default
+4. **N-gram language dependence:** Current approach assumes English word tokenization - may need adjustments for other languages
+
 ## Session Continuity
 
-Last session: 2025-01-19 13:49 UTC
-Stopped at: Completed plan 01-03 (Natural Language Explanations)
-Resume file: None (plan complete, ready for 01-04)
+Last session: 2026-01-19 16:20 UTC
+Stopped at: Completed plan 01-04 (Overused Phrases & Patterns Detection)
+Resume file: None (Phase 1 complete, ready for Phase 2)
 
 **Infrastructure Note:**
 - Ollama service added to docker-compose.yml (llama3:8b, nomic-embed-text:v1.5 models)
 - Health check supports degraded mode (200 OK without Ollama)
 - Backend/celery depend on service_started (not service_healthy) for faster startup
+- DEVELOPMENT_MODE environment variable added for auth bypass in local development
+- Slowapi parameter naming conflict resolved (avoid `request` parameter name in endpoints)
