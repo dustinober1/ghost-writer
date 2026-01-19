@@ -22,6 +22,7 @@ interface TextSegment {
   end_index: number;
   confidence_level: 'HIGH' | 'MEDIUM' | 'LOW';
   feature_attribution?: FeatureAttribution[];
+  sentence_explanation?: string;
 }
 
 interface HeatMapData {
@@ -32,6 +33,7 @@ interface HeatMapData {
     medium: number;
     low: number;
   };
+  document_explanation?: string;
 }
 
 interface AnalysisResult {
@@ -294,6 +296,23 @@ export default function HeatMap() {
             </CardContent>
           </Card>
 
+          {/* Document Explanation Card */}
+          {heat_map_data.document_explanation && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary-500" />
+                  <CardTitle>What This Means</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {heat_map_data.document_explanation}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Granularity Selector */}
           <Card>
             <CardHeader>
@@ -529,12 +548,27 @@ export default function HeatMap() {
                 ))}
               </CardContent>
             </Card>
+          ) : null}
+
+          {/* In Plain English - Sentence Explanation */}
+          {selectedSegment && selectedSegment.sentence_explanation ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>In Plain English</CardTitle>
+                <CardDescription>Why this sentence was flagged</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {selectedSegment.sentence_explanation}
+                </p>
+              </CardContent>
+            </Card>
           ) : selectedSegment ? (
             <Card>
               <CardContent className="text-center py-6">
                 <Info className="h-8 w-8 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Feature attribution not available for this segment
+                  Sentence explanation not available for this segment
                 </p>
               </CardContent>
             </Card>
