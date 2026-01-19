@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 3 of 7 (in progress)
-Plan: 1 of 4 in Phase 3
-Status: Phase 3 Plan 1 complete
-Last activity: 2026-01-19 — Completed 03-01 (API Key Authentication Model)
+Plan: 3 of 4 in Phase 3
+Status: Phase 3 Plan 3 complete
+Last activity: 2026-01-19 — Completed 03-03 (Protected OpenAPI Documentation)
 
-Progress: [███████████] 32% (9/28 total plans complete)
+Progress: [████████████] 36% (10/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
-- Average duration: 11 minutes
-- Total execution time: 1.6 hours
+- Total plans completed: 10
+- Average duration: 10 minutes
+- Total execution time: 1.7 hours
 
 **By Phase:**
 
@@ -29,15 +29,15 @@ Progress: [███████████] 32% (9/28 total plans complete)
 |-------|-------|----------|----------|
 | 1. Explainability | 4 | 4 | 15 minutes |
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
-| 3. Enterprise API | 4 | 1 | 2 minutes |
+| 3. Enterprise API | 4 | 3 | 2 minutes |
 | 4. Multi-Model Ensemble | 3 | 0 | TBD |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 01-04 (20 min), 02-01 (8 min), 02-02 (5 min), 02-03 (11 min), 03-01 (2 min)
-- Trend: Steady progress, Phase 3 started
+- Last 5 plans: 01-04 (20 min), 02-01 (8 min), 02-02 (5 min), 02-03 (11 min), 03-01 (2 min), 03-03 (1 min)
+- Trend: Steady progress, Phase 3 nearly complete
 - Phase 2 complete with clustering, similarity matrix, and batch upload UI
 
 *Updated after each phase completion*
@@ -106,6 +106,12 @@ Recent decisions affecting current work:
 5. **gw_ prefix convention** - Human-readable prefix identifies Ghost-Writer API keys and allows future key type extensions
 6. **Dual authentication support** - JWT for web sessions, API keys for programmatic access - both methods supported seamlessly
 
+**From Plan 03-03 (Protected OpenAPI Documentation):**
+1. **Disable public docs by default** - Production best practice to hide API structure from unauthenticated users, reducing attack surface
+2. **Protected docs endpoints** - /docs, /redoc, /openapi.json all require authentication via JWT or API key
+3. **Explicit opt-in for public dev docs** - Requires both ENVIRONMENT=development AND ENABLE_PUBLIC_DOCS=true to prevent accidental public exposure
+4. **Tier limits in OpenAPI schema** - Rate limit information (free: 30, pro: 100, enterprise: 1000) exposed in schema for API consumers
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -144,8 +150,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 20:21 UTC
-Stopped at: Completed 03-01-PLAN.md (API Key Authentication Model)
+Last session: 2026-01-19 20:24 UTC
+Stopped at: Completed 03-03-PLAN.md (Protected OpenAPI Documentation)
 Resume file: None
 
 **Infrastructure Note:**
@@ -161,3 +167,5 @@ Resume file: None
 - API key authentication via SHA-256 hashed keys with X-API-Key header support
 - ApiKey model with tier-based limits (free: 3, pro: 10, enterprise: unlimited)
 - API key management endpoints: POST /api/keys, GET /api/keys, DELETE /api/keys/{id}
+- Protected docs endpoints: /docs (Swagger UI), /redoc (ReDoc), /openapi.json all require auth
+- Optional public dev docs available with ENVIRONMENT=development and ENABLE_PUBLIC_DOCS=true
