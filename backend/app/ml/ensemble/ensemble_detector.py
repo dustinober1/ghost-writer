@@ -22,6 +22,7 @@ from app.ml.ensemble.base_detectors import (
     ContrastiveDetectorWrapper,
 )
 from app.ml.ensemble.weights import calculate_weights_from_accuracy, default_model_weights
+from app.ml.ensemble.calibration import CalibratedEnsemble, fit_calibration
 
 
 class EnsembleDetector:
@@ -39,7 +40,8 @@ class EnsembleDetector:
     def __init__(
         self,
         model_accuracy: Optional[Dict[str, float]] = None,
-        use_sklearn: bool = True
+        use_sklearn: bool = True,
+        use_calibration: bool = False
     ):
         """
         Initialize the ensemble detector.
@@ -50,9 +52,11 @@ class EnsembleDetector:
                 Values should be in [0, 1] range.
             use_sklearn: Whether to use sklearn VotingClassifier. If False or sklearn
                 unavailable, uses manual weighted averaging.
+            use_calibration: Whether to use probability calibration (requires sklearn).
         """
         self.model_accuracy = model_accuracy or {}
         self.use_sklearn = use_sklearn and SKLEARN_AVAILABLE
+        self.use_calibration = use_calibration and SKLEARN_AVAILABLE
 
         # Initialize base detectors
         self.stylometric_detector = StylometricDetector()
@@ -64,6 +68,7 @@ class EnsembleDetector:
 
         # Initialize sklearn VotingClassifier if available
         self.voting_classifier = None
+        self.calibrated_ensemble = None
         if self.use_sklearn:
             self._init_voting_classifier()
 
@@ -313,7 +318,7 @@ class EnsembleDetector:
         Returns:
             Dict with model weights and availability status
         """
-        return {
+        info = {
             "model_weights": {
                 "stylometric": self.weights[0],
                 "perplexity": self.weights[1],
@@ -322,8 +327,71 @@ class EnsembleDetector:
             "model_accuracy": self.model_accuracy,
             "sklearn_available": SKLEARN_AVAILABLE,
             "using_sklearn": self.voting_classifier is not None,
-            "model_used": "ensemble" if self.voting_classifier is not None else "manual"
+            "model_used": "ensemble" if self.voting_classifier is not None else "manual",
+            "using_calibration": self.calibrated_ensemble is not None
         }
+
+        # Add calibration metrics if available
+        if self.calibrated_ensemble is not None:
+            info["calibration_metrics"] = self.calibrated_ensemble.get_calibration_metrics()
+
+        return info
+
+    def calibrate(
+        self,
+        X_calib: np.ndarray,
+        y_calib: np.ndarray,
+        method: str = 'sigmoid',
+        cv: int = 5
+    ) -> bool:
+        """
+        Calibrate the ensemble using a separate calibration dataset.
+
+        IMPORTANT: Use different data than training to prevent data leakage.
+        Calibration should be done on held-out data.
+
+        Args:
+            X_calib: Calibration features
+            y_calib: Calibration labels (0=human, 1=AI)
+            method: 'sigmoid' (Platt scaling) or 'isotonic'
+            cv: Number of cross-validation folds
+
+        Returns:
+            True if calibration succeeded, False otherwise
+        """
+        if not SKLEARN_AVAILABLE:
+            print("Warning: scikit-learn not available, cannot calibrate")
+            return False
+
+        if self.voting_classifier is None:
+            print("Warning: VotingClassifier not initialized, cannot calibrate")
+            return False
+
+        try:
+            self.calibrated_ensemble = fit_calibration(
+                self.voting_classifier,
+                X_calib,
+                y_calib,
+                method=method,
+                cv=cv
+            )
+            return self.calibrated_ensemble is not None
+
+        except Exception as e:
+            print(f"Error during calibration: {e}")
+            return False
+
+    def get_calibration_metrics(self) -> Optional[Dict]:
+        """
+        Get calibration quality metrics.
+
+        Returns:
+            Dict with Brier score and calibration info, or None if not calibrated
+        """
+        if self.calibrated_ensemble is None:
+            return None
+
+        return self.calibrated_ensemble.get_calibration_metrics()
 
 
 def predict_ai_probability(
