@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 4 of 7 (in progress)
-Plan: 1 of 3 in Phase 4
-Status: Plan 04-01 Complete
-Last activity: 2026-01-19 — Completed 04-01 (Multi-Model Ensemble Detector)
+Plan: 2 of 3 in Phase 4
+Status: Plan 04-02 Complete
+Last activity: 2026-01-19 — Completed 04-02 (Ensemble Calibration and Performance Monitoring)
 
-Progress: [████████████░░░░░░░░░░░░░░░] 46% (13/28 total plans complete)
+Progress: [██████████████░░░░░░░░░░░░░] 50% (14/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 10 minutes
-- Total execution time: 2.1 hours
+- Total execution time: 2.3 hours
 
 **By Phase:**
 
@@ -30,15 +30,15 @@ Progress: [████████████░░░░░░░░░░░
 | 1. Explainability | 4 | 4 | 15 minutes |
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
-| 4. Multi-Model Ensemble | 3 | 1 | 8 minutes |
+| 4. Multi-Model Ensemble | 3 | 2 | 8 minutes |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min), 04-01 (8 min)
-- Trend: Phase 4 started with ensemble detector implementation
-- Phase 4 delivered: EnsembleDetector, base detector wrappers, weight calculation, analyze_with_ensemble()
+- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min), 04-01 (8 min), 04-02 (8 min)
+- Trend: Phase 4 continuing with ensemble calibration and performance tracking
+- Phase 4 delivered: EnsembleDetector, base detectors, weights, calibration, performance monitoring, ensemble API
 
 *Updated after each phase completion*
 
@@ -137,6 +137,15 @@ Recent decisions affecting current work:
 6. **analyze_with_ensemble() separate from analyze_text()** - New method preserves backward compatibility while adding ensemble capabilities
 7. **sklearn-compatible detector wrappers** - Each detector implements fit/predict_proba/predict interface for VotingClassifier integration
 
+**From Plan 04-02 (Ensemble Calibration and Performance Monitoring):**
+1. **CalibratedClassifierCV with ensemble=True for stable cross-validation** - Wraps VotingClassifier with sklearn's calibration to prevent overconfidence
+2. **Sigmoid (Platt scaling) as default calibration method** - Works better for small datasets (<1000 samples) compared to isotonic regression
+3. **Exponential moving average (alpha=0.3) for smooth weight transitions** - Provides responsive yet stable weight updates based on performance
+4. **Minimum 100 predictions before weight updates** - Prevents rapid weight changes from insufficient data that could degrade performance
+5. **Minimum weight of 0.1 per model** - Ensures no model gets zeroed out, maintaining ensemble diversity even during temporary underperformance
+6. **Separate calibration dataset requirement** - Calibration must use held-out data different from training to prevent data leakage
+7. **Public read-only weights endpoint** - GET /api/ensemble/weights requires no auth for transparency, admin endpoints for modifications
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -175,8 +184,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 20:39 UTC
-Stopped at: Completed 04-01-PLAN.md (Multi-Model Ensemble Detector)
+Last session: 2026-01-19 21:17 UTC
+Stopped at: Completed 04-02-PLAN.md (Ensemble Calibration and Performance Monitoring)
 Resume file: None
 
 **Infrastructure Note:**
@@ -206,3 +215,8 @@ Resume file: None
 - **NEW:** calculate_weights_from_accuracy() utility for ensemble weight normalization
 - **NEW:** analyze_with_ensemble() method returning per-model and ensemble probabilities
 - **NEW:** EnsembleResult and EnsembleAnalysisRequest schemas for API responses
+- **NEW:** CalibratedEnsemble class with sklearn CalibratedClassifierCV wrapper
+- **NEW:** PerformanceMonitor service with EMA-based tracking and weight updates
+- **NEW:** Ensemble management API: /api/ensemble/stats, /calibrate, /weights, /track, /reliability, /predictions
+- **NEW:** ModelPerformance database table for persistent tracking
+- **NEW:** Calibration metrics: Brier score, reliability diagram data
