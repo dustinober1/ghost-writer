@@ -71,7 +71,8 @@ Recent decisions affecting current work:
 
 [From .planning/todos/pending/ — ideas captured during sessions]
 
-None yet.
+**Infrastructure:**
+- Download Ollama models (llama3:8b, nomic-embed-text:v1.5) - ~4GB, required for full AI detection pipeline
 
 ### Blockers/Concerns
 
