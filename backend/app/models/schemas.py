@@ -164,6 +164,49 @@ class EnhancedFingerprintResponse(BaseModel):
         from_attributes = True
 
 
+# Fingerprint Comparison Schemas
+class FeatureDeviation(BaseModel):
+    """Individual feature deviation between text and fingerprint."""
+    feature: str
+    text_value: float
+    fingerprint_value: float
+    deviation: float
+
+
+class ConfidenceInterval(BaseModel):
+    """Confidence interval for similarity score."""
+    lower: float
+    upper: float
+
+
+class FingerprintComparisonRequest(BaseModel):
+    """Request schema for comparing text to fingerprint."""
+    text: str = Field(..., min_length=10)
+    use_enhanced: bool = Field(default=True, description="Use enhanced fingerprint if available")
+
+
+class FingerprintComparisonResponse(BaseModel):
+    """Response schema for fingerprint comparison with confidence intervals."""
+    similarity: float = Field(..., ge=0.0, le=1.0)
+    confidence_interval: ConfidenceInterval
+    match_level: str = Field(..., pattern="^(HIGH|MEDIUM|LOW)$")
+    feature_deviations: List[FeatureDeviation]
+    method_used: str  # "time_weighted_ema", "average", or "basic"
+    corpus_size: Optional[int] = None
+
+
+class FingerprintProfile(BaseModel):
+    """Profile response with fingerprint metadata."""
+    has_fingerprint: bool
+    corpus_size: Optional[int] = None
+    method: Optional[str] = None
+    alpha: Optional[float] = None
+    source_distribution: Optional[Dict[str, int]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    feature_count: int = 27  # Number of stylometric features
+
+
 # Analysis Schemas
 class FeatureAttribution(BaseModel):
     """Individual feature attribution for explaining AI detection"""
