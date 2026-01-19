@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch, api_keys
+from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch, api_keys, docs
 from app.models.database import init_db
 from app.utils.db_check import check_db_connection
 from app.middleware.rate_limit import get_rate_limiter, _rate_limit_exceeded_handler
@@ -49,18 +49,23 @@ Use local LLMs (Ollama) to analyze text patterns and distinguish between human a
 
 ## Authentication
 
-All endpoints (except `/health`, `/ready`, `/live`) require JWT authentication.
+This API requires authentication for all endpoints including documentation.
+
+**Web UI Authentication:** Use JWT tokens from `/api/auth/login-json`
+**API Access:** Use API keys from `/api/keys` with `X-API-Key` header
 
 1. Register: `POST /api/auth/register`
-2. Login: `POST /api/auth/login-json` 
+2. Login: `POST /api/auth/login-json`
 3. Use the returned `access_token` in the `Authorization: Bearer <token>` header
+4. Or create an API key with `POST /api/keys` and use `X-API-Key` header
 
 ## Rate Limits
 
-- Authentication: 5 requests/minute
-- Analysis: 30 requests/minute  
-- Rewrite: 10 requests/minute
-- General: 100 requests/minute
+Rate limits are enforced per user based on subscription tier.
+
+- **Free tier**: 30 requests/minute for analysis
+- **Pro tier**: 100 requests/minute for analysis
+- **Enterprise tier**: Custom limits
 
 ## GDPR Compliance
 
@@ -69,36 +74,22 @@ All endpoints (except `/health`, `/ready`, `/live`) require JWT authentication.
 - Delete account: `DELETE /api/account/delete-immediately`
 
 ## Features
-    
-    * **Text Analysis**: Analyze text for AI vs human writing patterns
-    * **Fingerprinting**: Create personal writing fingerprints
-    * **Style Rewriting**: Rewrite AI-generated text to match your style
-    * **Analytics**: Track your analysis history and performance
-    
-    ## Authentication
-    
-    Most endpoints require authentication. Use the `/api/auth/register` endpoint to create an account,
-    then use `/api/auth/login` or `/api/auth/login-json` to get an access token.
-    
-    Include the token in the Authorization header:
-    ```
-    Authorization: Bearer <your-access-token>
-    ```
-    
-    Access tokens expire after 30 minutes. Use the refresh token endpoint to get a new access token.
-    
-    ## Rate Limiting
-    
-    * Auth endpoints: 5 requests per minute
-    * Analysis endpoints: 30 requests per minute
-    * Rewrite endpoints: 10 requests per minute
-    * General endpoints: 100 requests per minute
-    
-    ## Support
-    
-    For issues or questions, please contact support.
-    """,
+
+* **Text Analysis**: Analyze text for AI vs human writing patterns
+* **Fingerprinting**: Create personal writing fingerprints
+* **Style Rewriting**: Rewrite AI-generated text to match your style
+* **Analytics**: Track your analysis history and performance
+* **Batch Analysis**: Upload multiple documents for AI detection
+* **API Keys**: Generate API keys for programmatic access
+
+## Support
+
+For issues or questions, please contact support.
+""",
     version="1.0.0",
+    docs_url=None,  # Disable public docs
+    redoc_url=None,  # Disable public redoc
+    openapi_url=None,  # Disable public schema
     contact={
         "name": "Ghostwriter Support",
         "email": "support@ghostwriter.local",
@@ -144,6 +135,7 @@ app.include_router(account.router)
 app.include_router(admin.router)
 app.include_router(batch.router)
 app.include_router(api_keys.router)
+app.include_router(docs.router)
 
 
 @app.on_event("startup")
