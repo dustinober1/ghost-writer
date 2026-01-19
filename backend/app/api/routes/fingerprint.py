@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from app.models.database import get_db, User, FingerprintSample, EnhancedFingerprint
+from datetime import datetime
+from app.models.database import get_db, User, FingerprintSample, EnhancedFingerprint, Fingerprint
 from app.models.schemas import (
     WritingSampleCreate,
     WritingSampleResponse,
@@ -10,7 +11,12 @@ from app.models.schemas import (
     FingerprintSampleCreate,
     FingerprintSampleResponse,
     CorpusStatus,
-    EnhancedFingerprintResponse
+    EnhancedFingerprintResponse,
+    FingerprintComparisonRequest,
+    FingerprintComparisonResponse,
+    FingerprintProfile,
+    FeatureDeviation,
+    ConfidenceInterval
 )
 from app.services.fingerprint_service import get_fingerprint_service
 from app.utils.auth import get_current_user
@@ -18,6 +24,7 @@ from app.middleware.rate_limit import general_rate_limit
 from app.utils.file_validation import validate_upload_file, validate_text_length
 from app.middleware.input_sanitization import sanitize_text, sanitize_filename
 from app.ml.fingerprint.corpus_builder import FingerprintCorpusBuilder
+from app.ml.fingerprint.similarity_calculator import FingerprintComparator
 from app.ml.feature_extraction import extract_feature_vector
 import docx
 import PyPDF2
@@ -486,3 +493,175 @@ def generate_enhanced_fingerprint(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error generating enhanced fingerprint: {str(e)}"
         )
+
+
+# ============= Fingerprint Comparison Endpoints =============
+
+@router.post("/compare", response_model=FingerprintComparisonResponse)
+def compare_text_to_fingerprint(
+    request: FingerprintComparisonRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compare text to user's fingerprint with confidence intervals.
+
+    Returns similarity score, confidence interval, match level,
+    and which features differ most.
+
+    Args:
+        request: Comparison request with text and use_enhanced flag
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        FingerprintComparisonResponse with similarity analysis
+    """
+    # Sanitize input text
+    text_content = sanitize_text(request.text)
+
+    if not text_content or len(text_content.strip()) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text must be at least 10 characters long"
+        )
+
+    # Try to get enhanced fingerprint first if use_enhanced is True
+    fingerprint_dict = None
+    fingerprint_stats = None
+    method_used = "basic"
+
+    if request.use_enhanced:
+        enhanced_fp = db.query(EnhancedFingerprint).filter(
+            EnhancedFingerprint.user_id == current_user.id
+        ).first()
+
+        if enhanced_fp:
+            fingerprint_dict = {
+                "feature_vector": enhanced_fp.feature_vector,
+                "corpus_size": enhanced_fp.corpus_size,
+                "method": enhanced_fp.method
+            }
+            fingerprint_stats = enhanced_fp.feature_statistics
+            method_used = f"{enhanced_fp.method}_ema" if enhanced_fp.method == "time_weighted" else enhanced_fp.method
+
+    # Fall back to basic fingerprint if no enhanced fingerprint
+    if fingerprint_dict is None:
+        basic_fp = db.query(Fingerprint).filter(
+            Fingerprint.user_id == current_user.id
+        ).first()
+
+        if not basic_fp:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No fingerprint found. Please generate a fingerprint first."
+            )
+
+        fingerprint_dict = {
+            "feature_vector": basic_fp.feature_vector,
+            "model_version": basic_fp.model_version
+        }
+        method_used = "basic"
+
+    # Extract features from input text
+    try:
+        text_features = extract_feature_vector(text_content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error extracting features from text: {str(e)}"
+        )
+
+    # Compare using FingerprintComparator
+    try:
+        comparator = FingerprintComparator(confidence_level=0.95)
+        comparison_result = comparator.compare_with_confidence(
+            text_features, fingerprint_dict, fingerprint_stats
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error comparing text to fingerprint: {str(e)}"
+        )
+
+    # Convert feature deviations to response format
+    feature_deviations = []
+    for feature_name, deviation_data in comparison_result.get("feature_deviations", {}).items():
+        feature_deviations.append(FeatureDeviation(
+            feature=feature_name,
+            text_value=deviation_data.get("text_value", 0.0),
+            fingerprint_value=deviation_data.get("fingerprint_value", 0.0),
+            deviation=deviation_data.get("deviation", 0.0)
+        ))
+
+    # Build confidence interval
+    ci_lower, ci_upper = comparison_result.get("confidence_interval", [0.0, 1.0])
+    confidence_interval = ConfidenceInterval(lower=ci_lower, upper=ci_upper)
+
+    return FingerprintComparisonResponse(
+        similarity=comparison_result["similarity"],
+        confidence_interval=confidence_interval,
+        match_level=comparison_result["match_level"],
+        feature_deviations=feature_deviations,
+        method_used=method_used,
+        corpus_size=fingerprint_dict.get("corpus_size")
+    )
+
+
+@router.get("/profile", response_model=FingerprintProfile)
+def get_fingerprint_profile(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get user's fingerprint profile with metadata.
+
+    Returns information about the user's fingerprint including
+    corpus size, method, alpha, source distribution, and timestamps.
+
+    Args:
+        current_user: Authenticated user
+        db: Database session
+
+    Returns:
+        FingerprintProfile with metadata
+    """
+    # Try enhanced fingerprint first
+    enhanced_fp = db.query(EnhancedFingerprint).filter(
+        EnhancedFingerprint.user_id == current_user.id
+    ).first()
+
+    if enhanced_fp:
+        return FingerprintProfile(
+            has_fingerprint=True,
+            corpus_size=enhanced_fp.corpus_size,
+            method=enhanced_fp.method,
+            alpha=enhanced_fp.alpha,
+            source_distribution=enhanced_fp.source_distribution,
+            created_at=enhanced_fp.created_at,
+            updated_at=enhanced_fp.updated_at,
+            feature_count=27
+        )
+
+    # Fall back to basic fingerprint
+    basic_fp = db.query(Fingerprint).filter(
+        Fingerprint.user_id == current_user.id
+    ).first()
+
+    if basic_fp:
+        return FingerprintProfile(
+            has_fingerprint=True,
+            corpus_size=None,
+            method=basic_fp.model_version,
+            alpha=None,
+            source_distribution=None,
+            created_at=basic_fp.created_at,
+            updated_at=basic_fp.updated_at,
+            feature_count=27
+        )
+
+    # No fingerprint found
+    return FingerprintProfile(
+        has_fingerprint=False,
+        feature_count=27
+    )
