@@ -4,10 +4,11 @@ Handles storage, generation, and fine-tuning of user fingerprints.
 """
 from typing import List, Optional, Dict
 from sqlalchemy.orm import Session
-from app.models.database import User, WritingSample, Fingerprint, FingerprintSample, EnhancedFingerprint
+from app.models.database import User, WritingSample, Fingerprint, FingerprintSample, EnhancedFingerprint, DriftAlert
 from app.ml.fingerprint import generate_fingerprint, update_fingerprint
 from app.ml.fingerprint.corpus_builder import FingerprintCorpusBuilder
 from app.ml.fingerprint.similarity_calculator import FingerprintComparator
+from app.ml.fingerprint.drift_detector import StyleDriftDetector
 from app.ml.feature_extraction import extract_feature_vector
 from datetime import datetime
 
@@ -566,6 +567,215 @@ class FingerprintService:
             "updated_at": None,
             "feature_count": 27
         }
+
+    # ============= Drift Detection Methods =============
+
+    def get_drift_detector(
+        self,
+        db: Session,
+        user_id: int
+    ) -> StyleDriftDetector:
+        """
+        Get or create a drift detector for the user.
+
+        Attempts to load baseline from existing alerts or creates new detector.
+
+        Args:
+            db: Database session
+            user_id: User ID
+
+        Returns:
+            StyleDriftDetector instance for the user
+        """
+        # Check if user has a service attribute for caching detectors
+        if not hasattr(self, '_drift_detector_cache'):
+            self._drift_detector_cache = {}
+
+        if user_id in self._drift_detector_cache:
+            return self._drift_detector_cache[user_id]
+
+        detector = StyleDriftDetector()
+
+        # Try to establish baseline from existing alerts
+        recent_alerts = db.query(DriftAlert).filter(
+            DriftAlert.user_id == user_id
+        ).order_by(DriftAlert.created_at.desc()).limit(10).all()
+
+        if recent_alerts:
+            # Build similarity history from alerts
+            similarities = [alert.baseline_similarity for alert in recent_alerts if alert.baseline_similarity > 0]
+            if similarities and len(similarities) >= 3:
+                detector.establish_baseline(similarities)
+
+        self._drift_detector_cache[user_id] = detector
+        return detector
+
+    def check_drift_and_create_alert(
+        self,
+        db: Session,
+        user_id: int,
+        text: str
+    ) -> Optional[DriftAlert]:
+        """
+        Check text for style drift and create alert if detected.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            text: Text content to check for drift
+
+        Returns:
+            DriftAlert object if drift detected, None otherwise
+
+        Raises:
+            ValueError: If no enhanced fingerprint found
+        """
+        # Get user's enhanced fingerprint
+        enhanced_fp = db.query(EnhancedFingerprint).filter(
+            EnhancedFingerprint.user_id == user_id
+        ).first()
+
+        if not enhanced_fp:
+            raise ValueError(
+                "No enhanced fingerprint found. Please generate an enhanced fingerprint first."
+            )
+
+        # Get drift detector
+        detector = self.get_drift_detector(db, user_id)
+
+        # Extract features from text
+        text_features = extract_feature_vector(text)
+
+        # Compare text to fingerprint
+        fingerprint_dict = {
+            "feature_vector": enhanced_fp.feature_vector,
+            "corpus_size": enhanced_fp.corpus_size,
+            "method": enhanced_fp.method
+        }
+        fingerprint_stats = enhanced_fp.feature_statistics
+
+        comparator = FingerprintComparator(confidence_level=0.95)
+        comparison_result = comparator.compare_with_confidence(
+            text_features, fingerprint_dict, fingerprint_stats
+        )
+
+        similarity = comparison_result["similarity"]
+
+        # Check for drift
+        drift_result = detector.check_drift(
+            similarity=similarity,
+            feature_deviations=comparison_result.get("feature_deviations", {}),
+            timestamp=datetime.utcnow()
+        )
+
+        # Create alert if drift detected
+        if drift_result["drift_detected"]:
+            # Convert changed_features to list of dicts for JSON storage
+            changed_features_json = []
+            for feature_change in drift_result.get("changed_features", []):
+                changed_features_json.append({
+                    "feature": feature_change.get("feature", ""),
+                    "current_value": feature_change.get("current_value", 0.0),
+                    "baseline_value": feature_change.get("baseline_value", 0.0),
+                    "normalized_deviation": feature_change.get("normalized_deviation", 0.0)
+                })
+
+            # Create text preview
+            text_preview = text[:200] + "..." if len(text) > 200 else text
+
+            new_alert = DriftAlert(
+                user_id=user_id,
+                fingerprint_id=enhanced_fp.id,
+                severity=drift_result["severity"],
+                similarity_score=similarity,
+                baseline_similarity=drift_result["baseline_mean"],
+                z_score=drift_result["z_score"],
+                changed_features=changed_features_json,
+                text_preview=text_preview,
+                acknowledged=False
+            )
+            db.add(new_alert)
+            db.commit()
+            db.refresh(new_alert)
+            return new_alert
+
+        return None
+
+    def get_drift_alerts(
+        self,
+        db: Session,
+        user_id: int,
+        include_acknowledged: bool = False
+    ) -> List[DriftAlert]:
+        """
+        Get drift alerts for a user.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            include_acknowledged: If False, only return unacknowledged alerts
+
+        Returns:
+            List of DriftAlert objects ordered by created_at DESC
+        """
+        query = db.query(DriftAlert).filter(
+            DriftAlert.user_id == user_id
+        )
+
+        if not include_acknowledged:
+            query = query.filter(DriftAlert.acknowledged == False)
+
+        return query.order_by(DriftAlert.created_at.desc()).all()
+
+    def acknowledge_alert(
+        self,
+        db: Session,
+        user_id: int,
+        alert_id: int,
+        update_baseline: bool = False
+    ) -> bool:
+        """
+        Acknowledge a drift alert.
+
+        Args:
+            db: Database session
+            user_id: User ID
+            alert_id: ID of alert to acknowledge
+            update_baseline: If True, recalculate baseline from recent alerts
+
+        Returns:
+            True if acknowledged successfully
+
+        Raises:
+            ValueError: If alert doesn't exist or doesn't belong to user
+        """
+        alert = db.query(DriftAlert).filter(
+            DriftAlert.id == alert_id
+        ).first()
+
+        if not alert:
+            raise ValueError("Alert not found")
+
+        if alert.user_id != user_id:
+            raise ValueError("Alert does not belong to this user")
+
+        alert.acknowledged = True
+
+        # Update baseline if requested
+        if update_baseline:
+            detector = self.get_drift_detector(db, user_id)
+
+            # Get recent similarities from alerts
+            recent_alerts = db.query(DriftAlert).filter(
+                DriftAlert.user_id == user_id
+            ).order_by(DriftAlert.created_at.desc()).limit(10).all()
+
+            similarities = [a.similarity_score for a in recent_alerts if a.similarity_score > 0]
+            if similarities:
+                detector.update_baseline(similarities)
+
+        db.commit()
+        return True
 
 
 # Global service instance
