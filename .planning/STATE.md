@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 7 (in progress)
-Plan: 2 of 4 in Phase 5
-Status: Phase 5 Plan 2 Complete - Corpus Management API and UI
-Last activity: 2026-01-19 — Completed 05-02-PLAN.md (Corpus Management API and UI)
+Plan: 5 of 4 in Phase 5
+Status: Phase 5 Plan 5 Complete - Drift Detection Backend
+Last activity: 2026-01-19 — Completed 05-05-PLAN.md (Drift Detection Backend)
 
-Progress: [████████████████░░░░░░░░░░░] 61% (17/28 total plans complete)
+Progress: [█████████████████░░░░░░░░░░] 64% (18/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 9 minutes
-- Total execution time: 2.5 hours
+- Total execution time: 2.6 hours
 
 **By Phase:**
 
@@ -31,14 +31,14 @@ Progress: [████████████████░░░░░░░
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
 | 4. Multi-Model Ensemble | 3 | 3 | 10 minutes |
-| 5. Enhanced Fingerprinting | 4 | 3 | 5 minutes |
+| 5. Enhanced Fingerprinting | 4 | 4 | 5 minutes |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min), 05-02 (8 min), 05-03 (3 min)
-- Trend: Phase 5 progressing through enhanced fingerprinting
-- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, corpus API endpoints, CorpusBuilder React component, TimeWeightedFingerprintBuilder, FingerprintComparator
+- Last 5 plans: 04-03 (14 min), 05-01 (5 min), 05-02 (8 min), 05-03 (3 min), 05-05 (3 min)
+- Trend: Phase 5 complete - enhanced fingerprinting with drift detection
+- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, corpus API endpoints, CorpusBuilder React component, TimeWeightedFingerprintBuilder, FingerprintComparator, DriftAlert table, StyleDriftDetector
 
 *Updated after each phase completion*
 
@@ -180,6 +180,13 @@ Recent decisions affecting current work:
 6. **Top 5 feature deviations for interpretability** - Highlights most different stylometric features for user understanding
 7. **TimeWeightedFingerprintBuilder for incremental updates** - Supports streaming scenarios where samples arrive over time
 
+**From Plan 05-05 (Drift Detection Backend):**
+1. **Z-score threshold 2.0 for warning (95% confidence)** - Standard statistical process control threshold balancing sensitivity with false positive rate
+2. **Z-score threshold 3.0 for alert (99.7% confidence)** - High-confidence threshold for significant drift detection
+3. **Sliding window size of 10 samples** - Provides sufficient temporal context for baseline tracking while detecting drift reasonably quickly
+4. **No cascade delete on fingerprint_id** - Preserves alert history even if fingerprint is regenerated for retrospective analysis
+5. **Negative z-score interpretation** - Positive z-score indicates text is LESS similar than baseline (potential drift), negative z-score indicates text is MORE similar than baseline
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -218,8 +225,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 22:06 UTC
-Stopped at: Completed 05-02-PLAN.md (Corpus Management API and UI)
+Last session: 2026-01-19 22:07 UTC
+Stopped at: Completed 05-05-PLAN.md (Drift Detection Backend)
 Resume file: None
 
 **Infrastructure Note:**
@@ -284,3 +291,10 @@ Resume file: None
 - **NEW:** Confidence interval calculation: CI = z_score * SEM, SEM = sqrt(mean_variance / n_features)
 - **NEW:** Top 5 feature deviations with normalization by std
 - **NEW:** Module exports from app.ml.fingerprint: TimeWeightedFingerprintBuilder, FingerprintComparator, compare_with_confidence
+- **NEW:** DriftAlert database table with severity, similarity_score, z_score, changed_features, acknowledged
+- **NEW:** StyleDriftDetector at backend/app/ml/fingerprint/drift_detector.py (263 lines)
+- **NEW:** Z-score based drift detection: warning >=2.0 std, alert >=3.0 std
+- **NEW:** Sliding window tracking with deque(maxlen=10) for temporal analysis
+- **NEW:** establish_baseline(), check_drift(), update_baseline() methods
+- **NEW:** Pydantic schemas: DriftSeverity, FeatureChange, DriftDetectionResult, DriftAlertResponse, DriftAlertsList, DriftStatus
+- **NEW:** Module exports: StyleDriftDetector, establish_baseline, check_drift_with_detector
