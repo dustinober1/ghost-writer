@@ -71,6 +71,12 @@ class User(Base):
     document_versions = relationship(
         "DocumentVersion", back_populates="user", cascade="all, delete-orphan"
     )
+    fingerprint_samples = relationship(
+        "FingerprintSample", back_populates="user", cascade="all, delete-orphan"
+    )
+    enhanced_fingerprints = relationship(
+        "EnhancedFingerprint", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class WritingSample(Base):
@@ -244,6 +250,42 @@ class DocumentVersion(Base):
 
     # Relationship
     user = relationship("User", back_populates="document_versions")
+
+
+class FingerprintSample(Base):
+    """Individual writing sample for corpus-based fingerprint generation."""
+    __tablename__ = "fingerprint_samples"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    text_content = Column(Text, nullable=False)
+    source_type = Column(String, nullable=False)  # 'email', 'essay', 'blog', 'academic', 'document', 'manual'
+    features = Column(JSON, nullable=False)  # 27-element stylometric feature array
+    word_count = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    written_at = Column(DateTime, nullable=True)  # When text was originally written (for time-weighting)
+
+    # Relationship
+    user = relationship("User", back_populates="fingerprint_samples")
+
+
+class EnhancedFingerprint(Base):
+    """Corpus-based fingerprint with statistical metadata."""
+    __tablename__ = "enhanced_fingerprints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    feature_vector = Column(JSON, nullable=False)  # 27-element averaged feature vector
+    feature_statistics = Column(JSON, nullable=True)  # Per-feature mean/std/variance for confidence intervals
+    corpus_size = Column(Integer, default=0, nullable=False)  # Number of samples used
+    method = Column(String, default="time_weighted", nullable=False)  # 'time_weighted', 'average', 'source_weighted'
+    alpha = Column(Float, default=0.3, nullable=False)  # EMA smoothing parameter
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    source_distribution = Column(JSON, nullable=True)  # Count of samples by source_type
+
+    # Relationship
+    user = relationship("User", back_populates="enhanced_fingerprints")
 
 
 def get_db():
