@@ -11,17 +11,17 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 
 Phase: 3 of 7 (in progress)
 Plan: 3 of 4 in Phase 3
-Status: Phase 3 Plan 3 complete
-Last activity: 2026-01-19 — Completed 03-03 (Protected OpenAPI Documentation)
+Status: Phase 3 Plans 1, 2, 3 complete
+Last activity: 2026-01-19 — Completed 03-02 (Tiered Rate Limiting)
 
-Progress: [████████████] 36% (10/28 total plans complete)
+Progress: [████████████] 39% (11/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 10 minutes
-- Total execution time: 1.7 hours
+- Total execution time: 1.8 hours
 
 **By Phase:**
 
@@ -106,6 +106,15 @@ Recent decisions affecting current work:
 5. **gw_ prefix convention** - Human-readable prefix identifies Ghost-Writer API keys and allows future key type extensions
 6. **Dual authentication support** - JWT for web sessions, API keys for programmatic access - both methods supported seamlessly
 
+**From Plan 03-02 (Tiered Rate Limiting):**
+1. **Redis for distributed rate limiting** - Enables horizontal scaling across multiple backend instances with shared state
+2. **Tiered daily limits** - free=100, pro=10000, enterprise=100000 - aligns with business model for fair usage
+3. **Per-minute limits** - free=10/min, pro=100/min, enterprise=500/min - prevents rapid-fire abuse
+4. **Midnight UTC reset** - Daily keys use date-based Redis keys with calculated TTL until midnight
+5. **Degraded mode on Redis failure** - System remains available when Redis unavailable; preferable to rejecting all requests
+6. **X-RateLimit-* headers** - Standard HTTP headers (Limit-Day, Remaining-Day, Limit-Minute, Remaining-Minute, Reset) for quota visibility
+7. **User-based not IP-based** - Rate limits follow authenticated users, supporting dynamic IPs and API key usage
+
 **From Plan 03-03 (Protected OpenAPI Documentation):**
 1. **Disable public docs by default** - Production best practice to hide API structure from unauthenticated users, reducing attack surface
 2. **Protected docs endpoints** - /docs, /redoc, /openapi.json all require authentication via JWT or API key
@@ -150,8 +159,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 20:24 UTC
-Stopped at: Completed 03-03-PLAN.md (Protected OpenAPI Documentation)
+Last session: 2026-01-19 20:25 UTC
+Stopped at: Completed 03-02-PLAN.md (Tiered Rate Limiting)
 Resume file: None
 
 **Infrastructure Note:**
@@ -167,5 +176,7 @@ Resume file: None
 - API key authentication via SHA-256 hashed keys with X-API-Key header support
 - ApiKey model with tier-based limits (free: 3, pro: 10, enterprise: unlimited)
 - API key management endpoints: POST /api/keys, GET /api/keys, DELETE /api/keys/{id}
+- Tiered rate limiting via Redis with TIER_LIMITS: free=100/day, pro=10000/day, enterprise=100000/day
+- Rate limit endpoints: GET /api/usage, GET /api/limits with X-RateLimit-* headers
 - Protected docs endpoints: /docs (Swagger UI), /redoc (ReDoc), /openapi.json all require auth
 - Optional public dev docs available with ENVIRONMENT=development and ENABLE_PUBLIC_DOCS=true
