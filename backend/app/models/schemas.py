@@ -113,6 +113,57 @@ class FingerprintStatus(BaseModel):
     sample_count: int
 
 
+# Corpus-Based Fingerprint Schemas
+class FingerprintSampleCreate(BaseModel):
+    """Request schema for adding writing samples to corpus."""
+    text_content: str = Field(..., min_length=10)
+    source_type: str = Field(
+        default="manual",
+        pattern="^(email|essay|blog|academic|document|manual)$"
+    )
+    written_at: Optional[datetime] = None
+
+
+class FingerprintSampleResponse(BaseModel):
+    """Response schema for individual fingerprint samples."""
+    id: int
+    user_id: int
+    source_type: str
+    word_count: int
+    created_at: datetime
+    written_at: Optional[datetime] = None
+    text_preview: str  # First 100 chars of text_content
+
+    class Config:
+        from_attributes = True
+
+
+class CorpusStatus(BaseModel):
+    """Corpus summary response for tracking sample collection progress."""
+    sample_count: int
+    total_words: int
+    source_distribution: Dict[str, int]
+    ready_for_fingerprint: bool
+    samples_needed: int  # How many more samples needed (min 10)
+    oldest_sample: Optional[datetime] = None
+    newest_sample: Optional[datetime] = None
+
+
+class EnhancedFingerprintResponse(BaseModel):
+    """Response schema for enhanced/corpus-based fingerprints."""
+    id: int
+    user_id: int
+    corpus_size: int
+    method: str
+    alpha: float
+    source_distribution: Optional[Dict[str, int]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # Analysis Schemas
 class FeatureAttribution(BaseModel):
     """Individual feature attribution for explaining AI detection"""
