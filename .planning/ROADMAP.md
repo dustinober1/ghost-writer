@@ -36,12 +36,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 3. User can view clear, natural language explanations of why content was flagged (e.g., "This sentence has low burstiness and high perplexity, indicating AI-generated patterns")
 4. User can view overused phrases and patterns that triggered detection, with specific examples highlighted in the text
 
-**Plans**: 3 plans in 3 waves
+**Plans**: 4 plans in 3 waves
 
 Plans:
 - [ ] 01-01-PLAN.md — Per-sentence confidence scoring with color-coded risk categorization (high/medium/low)
 - [ ] 01-02-PLAN.md — Feature attribution showing which stylometric features contributed to AI detection
 - [ ] 01-03-PLAN.md — Natural language explanations at document and sentence level
+- [ ] 01-04-PLAN.md — Overused phrases and patterns detection with text highlighting
 
 ---
 
@@ -182,7 +183,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Explainability | 0/3 | Not started | - |
+| 1. Explainability | 0/4 | Not started | - |
 | 2. Batch Analysis | 0/TBD | Not started | - |
 | 3. Enterprise API | 0/TBD | Not started | - |
 | 4. Multi-Model Ensemble | 0/TBD | Not started | - |
@@ -193,4 +194,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 ---
 
 *Roadmap created: 2025-01-18*
-*Last updated: 2025-01-18 after Phase 1 planning*
+*Last updated: 2025-01-18 after Phase 1 revision*
