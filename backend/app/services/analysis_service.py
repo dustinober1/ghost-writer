@@ -24,6 +24,14 @@ from app.utils.cache import (
 from app.models.schemas import ConfidenceLevel
 
 
+# Import ensemble detector (lazy loading to avoid dependency issues)
+try:
+    from app.ml.ensemble.ensemble_detector import EnsembleDetector
+    ENSEMBLE_AVAILABLE = True
+except ImportError:
+    ENSEMBLE_AVAILABLE = False
+
+
 # Feature pattern descriptions for explanations
 FEATURE_PATTERNS = {
     "low_burstiness": "consistent sentence lengths throughout",
@@ -50,9 +58,24 @@ FEATURE_PATTERNS = {
 
 class AnalysisService:
     """Service for analyzing text and generating heat map data"""
-    
-    def __init__(self):
+
+    def __init__(self, use_ensemble: bool = True):
+        """
+        Initialize the analysis service.
+
+        Args:
+            use_ensemble: Whether to use multi-model ensemble (if available)
+        """
         self.contrastive_model = get_contrastive_model()
+        self.use_ensemble = use_ensemble and ENSEMBLE_AVAILABLE
+        self.ensemble_detector = None
+
+        if self.use_ensemble:
+            try:
+                self.ensemble_detector = EnsembleDetector()
+            except Exception as e:
+                print(f"Warning: Failed to initialize ensemble detector: {e}")
+                self.use_ensemble = False
     
     def analyze_text(
         self,
@@ -843,16 +866,172 @@ class AnalysisService:
     ) -> Dict:
         """
         Analyze text comparing against user's fingerprint.
-        
+
         Args:
             text: Text to analyze
             user_fingerprint: User's fingerprint dictionary
             granularity: "sentence" or "paragraph"
-        
+
         Returns:
             Dictionary with heat map data
         """
         return self.analyze_text(text, granularity, user_fingerprint)
+
+    def analyze_with_ensemble(
+        self,
+        text: str,
+        granularity: str = "sentence",
+        user_fingerprint: Optional[Dict] = None,
+        user_id: int = None,
+        use_cache: bool = True
+    ) -> Dict:
+        """
+        Analyze text using multi-model ensemble for improved accuracy.
+
+        Combines predictions from stylometric, perplexity, and contrastive models
+        using weighted soft voting.
+
+        Args:
+            text: Text to analyze
+            granularity: "sentence" or "paragraph"
+            user_fingerprint: Optional user fingerprint for comparison
+            user_id: Optional user ID for cache key
+            use_cache: Whether to use caching (default: True)
+
+        Returns:
+            Dictionary with:
+                - segments: List of segment results with ensemble probabilities
+                - overall_ai_probability: Ensemble-weighted average
+                - ensemble_results: Per-segment ensemble breakdown
+                - model_info: Ensemble configuration
+                - confidence_distribution: Counts by confidence level
+                - overused_patterns: Detected patterns
+                - document_explanation: Document-level summary
+        """
+        if not text or not text.strip():
+            raise ValueError("Text cannot be empty")
+
+        # Check cache first
+        if use_cache:
+            cache_key = text_hash(text + granularity + "_ensemble")
+            cached = get_cached_analysis(cache_key, user_id)
+            if cached:
+                return cached
+
+        # Get reference features if user fingerprint provided
+        reference_features = None
+        if user_fingerprint and "feature_vector" in user_fingerprint:
+            reference_features = np.array(user_fingerprint["feature_vector"])
+
+        # Split text into segments
+        if granularity == "sentence":
+            segments = split_into_sentences(text)
+        elif granularity == "paragraph":
+            segments = split_into_paragraphs(text)
+        else:
+            raise ValueError(f"Invalid granularity: {granularity}")
+
+        # Analyze each segment
+        segment_results = []
+        ensemble_results = []
+        current_index = 0
+
+        for segment in segments:
+            if not segment.strip():
+                continue
+
+            if self.ensemble_detector is not None:
+                # Use ensemble detector
+                ai_prob, model_probs = self.ensemble_detector.predict_ai_probability(
+                    segment, reference_features
+                )
+                model_used = model_probs.get("model_used", "ensemble")
+            else:
+                # Fallback to stylometric only
+                segment_features = extract_feature_vector(segment)
+                ai_prob = self._estimate_ai_probability(segment_features)
+                model_probs = {
+                    "stylometric": float(ai_prob),
+                    "perplexity": 0.5,
+                    "contrastive": 0.5,
+                    "ensemble": float(ai_prob)
+                }
+                model_used = "fallback"
+
+            # Calculate feature attribution
+            feature_attribution = self._generate_feature_attribution(segment, float(ai_prob))
+
+            # Find segment position
+            start_index = text.find(segment, current_index)
+            if start_index == -1:
+                start_index = current_index
+            end_index = start_index + len(segment)
+            current_index = end_index
+
+            # Build segment dict
+            segment_dict = {
+                "text": segment,
+                "ai_probability": float(ai_prob),
+                "start_index": start_index,
+                "end_index": end_index,
+                "confidence_level": self._calculate_confidence_level(float(ai_prob)),
+                "feature_attribution": feature_attribution
+            }
+
+            # Generate sentence-level explanation
+            segment_dict["sentence_explanation"] = self.generate_sentence_explanation(segment_dict)
+
+            segment_results.append(segment_dict)
+
+            # Store ensemble result
+            ensemble_results.append({
+                "text": segment,
+                "stylometric_probability": model_probs["stylometric"],
+                "perplexity_probability": model_probs["perplexity"],
+                "contrastive_probability": model_probs["contrastive"],
+                "ensemble_probability": model_probs["ensemble"],
+            })
+
+        # Calculate overall AI probability
+        if segment_results:
+            overall_ai_probability = np.mean([s["ai_probability"] for s in segment_results])
+        else:
+            overall_ai_probability = 0.5
+
+        # Calculate confidence distribution
+        confidence_distribution = {
+            "HIGH": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.HIGH),
+            "MEDIUM": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.MEDIUM),
+            "LOW": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.LOW)
+        }
+
+        # Detect overused patterns
+        overused_patterns = self.detect_overused_patterns(text, segment_results)
+
+        # Get model info
+        model_info = {"model_used": "ensemble"} if self.ensemble_detector else {"model_used": "fallback"}
+        if self.ensemble_detector:
+            model_info.update(self.ensemble_detector.get_model_info())
+
+        # Build result dictionary
+        result = {
+            "segments": segment_results,
+            "overall_ai_probability": float(overall_ai_probability),
+            "confidence_distribution": confidence_distribution,
+            "overused_patterns": overused_patterns,
+            "granularity": granularity,
+            "ensemble_results": ensemble_results,
+            "model_info": model_info
+        }
+
+        # Generate document-level explanation
+        result["document_explanation"] = self.generate_document_explanation(result)
+
+        # Cache the result
+        if use_cache:
+            cache_analysis_result(cache_key, result, user_id)
+
+        return result
 
 
 # Global service instance

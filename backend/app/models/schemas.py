@@ -339,3 +339,60 @@ class AnalysisHistoryResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+# Ensemble Schemas
+class EnsembleResult(BaseModel):
+    """Result from multi-model ensemble AI detection"""
+
+    stylometric_probability: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="AI probability from stylometric feature model"
+    )
+    perplexity_probability: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="AI probability from perplexity model"
+    )
+    contrastive_probability: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="AI probability from contrastive embedding model"
+    )
+    ensemble_probability: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Weighted ensemble AI probability"
+    )
+    model_weights: Dict[str, float] = Field(
+        default_factory=lambda: {
+            "stylometric": 0.4,
+            "perplexity": 0.3,
+            "contrastive": 0.3
+        },
+        description="Weight applied to each model in ensemble"
+    )
+    model_used: str = Field(
+        default="ensemble",
+        description="Which model generated the primary prediction"
+    )
+
+
+class EnsembleAnalysisRequest(BaseModel):
+    """Request for ensemble-based text analysis"""
+
+    text: str
+    granularity: str = Field(default="sentence", description="sentence or paragraph")
+    use_ensemble: bool = Field(
+        default=True,
+        description="Use multi-model ensemble (vs stylometric only)"
+    )
+    model_weights: Optional[Dict[str, float]] = Field(
+        default=None,
+        description="Optional custom weights for ensemble models"
+    )
