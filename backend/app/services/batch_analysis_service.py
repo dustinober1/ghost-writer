@@ -7,7 +7,7 @@ Provides functionality for:
 - Summarizing cluster statistics
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict
 import numpy as np
 
 
