@@ -9,17 +9,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Explainability (EXP)
 
-- [ ] **EXP-01**: User can view per-sentence confidence scores for analyzed text
-- [ ] **EXP-02**: User can view feature attribution showing which stylometric features contributed to AI detection
-- [ ] **EXP-03**: User can view clear explanations of why content was flagged (not just that it was flagged)
-- [ ] **EXP-04**: User can view overused phrases and patterns that triggered detection
+- [x] **EXP-01**: User can view per-sentence confidence scores for analyzed text
+- [x] **EXP-02**: User can view feature attribution showing which stylometric features contributed to AI detection
+- [x] **EXP-03**: User can view clear explanations of why content was flagged (not just that it was flagged)
+- [x] **EXP-04**: User can view overused phrases and patterns that triggered detection
 
 ### Batch Analysis (BATCH)
 
-- [ ] **BATCH-01**: User can upload multiple files at once (ZIP, folder drag-drop)
-- [ ] **BATCH-02**: System can cluster documents by similarity
-- [ ] **BATCH-03**: User can view comparison matrix with pairwise similarity scores across all uploaded documents
-- [ ] **BATCH-04**: User can export bulk results to CSV/JSON
+- [x] **BATCH-01**: User can upload multiple files at once (ZIP, folder drag-drop)
+- [x] **BATCH-02**: System can cluster documents by similarity
+- [x] **BATCH-03**: User can view comparison matrix with pairwise similarity scores across all uploaded documents
+- [x] **BATCH-04**: User can export bulk results to CSV/JSON
 
 ### Enterprise API (API)
 
@@ -95,14 +95,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXP-01 | Phase 1 | Pending |
-| EXP-02 | Phase 1 | Pending |
-| EXP-03 | Phase 1 | Pending |
-| EXP-04 | Phase 1 | Pending |
-| BATCH-01 | Phase 2 | Pending |
-| BATCH-02 | Phase 2 | Pending |
-| BATCH-03 | Phase 2 | Pending |
-| BATCH-04 | Phase 2 | Pending |
+| EXP-01 | Phase 1 | Complete |
+| EXP-02 | Phase 1 | Complete |
+| EXP-03 | Phase 1 | Complete |
+| EXP-04 | Phase 1 | Complete |
+| BATCH-01 | Phase 2 | Complete |
+| BATCH-02 | Phase 2 | Complete |
+| BATCH-03 | Phase 2 | Complete |
+| BATCH-04 | Phase 2 | Complete |
 | API-01 | Phase 3 | Pending |
 | API-02 | Phase 3 | Pending |
 | API-03 | Phase 3 | Pending |
@@ -127,4 +127,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 ---
 
 *Requirements defined: 2025-01-18*
-*Last updated: 2025-01-18 after roadmap creation*
+*Last updated: 2026-01-19 after Phase 2 completion*
