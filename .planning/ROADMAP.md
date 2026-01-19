@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Explainability** - Transparent AI detection with per-sentence attribution
 - [x] **Phase 2: Batch Analysis** - Multi-file processing with clustering and comparison
-- [ ] **Phase 3: Enterprise API** - REST API with authentication, rate limiting, and documentation
+- [x] **Phase 3: Enterprise API** - REST API with authentication, rate limiting, and documentation
 - [ ] **Phase 4: Multi-Model Ensemble** - Improved accuracy through combined detection methods
 - [ ] **Phase 5: Enhanced Fingerprinting** - Corpus-based fingerprints with style drift alerts
 - [ ] **Phase 6: Style Transfer** - Granular rewriting controls with intent preservation
@@ -112,12 +112,12 @@ Plans:
 2. System uses weighted voting based on model accuracy, with calibration to prevent overconfidence and reduce false positives
 3. User can view temporal analysis showing writing timeline, draft comparison, and AI injection detection (identifying portions of text that may have been AI-generated and inserted)
 
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 04-01: Multi-model ensemble orchestrator with weighted voting
-- [ ] 04-02: Model calibration and performance monitoring
-- [ ] 04-03: Temporal analysis and injection detection
+- [ ] 04-01-PLAN.md — Multi-model ensemble orchestrator with weighted voting (stylometric + perplexity + contrastive models via sklearn VotingClassifier)
+- [ ] 04-02-PLAN.md — Model calibration and performance monitoring (CalibratedClassifierCV, Brier score tracking, dynamic weight updates)
+- [ ] 04-03-PLAN.md — Temporal analysis and injection detection (document version tracking, timeline visualization, AI injection detection)
 
 ---
 
@@ -193,7 +193,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 1. Explainability | 4/4 | Complete | 2026-01-19 |
 | 2. Batch Analysis | 3/3 | Complete | 2026-01-19 |
 | 3. Enterprise API | 4/4 | Complete | 2026-01-19 |
-| 4. Multi-Model Ensemble | 0/TBD | Not started | - |
+| 4. Multi-Model Ensemble | 0/3 | Not started | - |
 | 5. Enhanced Fingerprinting | 0/TBD | Not started | - |
 | 6. Style Transfer | 0/TBD | Not started | - |
 | 7. Distribution | 0/TBD | Not started | - |
