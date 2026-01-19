@@ -2,10 +2,10 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status, Request
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Request, Security
+from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.orm import Session
-from app.models.database import get_db, User, RefreshToken
+from app.models.database import get_db, User, RefreshToken, ApiKey
 from app.models.schemas import TokenData
 import os
 import hashlib
@@ -28,6 +28,7 @@ MIN_PASSWORD_STRENGTH = int(os.getenv("MIN_PASSWORD_STRENGTH", "2"))  # 0-4 scal
 # We'll use bcrypt directly to avoid passlib's initialization issues
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 # Bcrypt has a 72-byte limit for passwords
 BCRYPT_MAX_PASSWORD_LENGTH = 72
@@ -272,3 +273,87 @@ def get_current_user_optional(request: Request, db: Session = Depends(get_db)) -
         return user
     except (JWTError, Exception):
         return None
+
+
+def get_api_key_user(
+    request: Request,
+    db: Session = Depends(get_db),
+    api_key: str = Security(api_key_header)
+) -> Optional[User]:
+    """
+    Validate API key and return user.
+    Returns None if no API key provided or invalid.
+    Supports dual auth: JWT Bearer token or X-API-Key header.
+    """
+    if not api_key:
+        return None
+
+    # Hash the provided key and compare with stored hash
+    key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+
+    api_key_record = db.query(ApiKey).filter(
+        ApiKey.key_hash == key_hash,
+        ApiKey.is_active == True
+    ).first()
+
+    if not api_key_record:
+        return None
+
+    # Check expiration
+    if api_key_record.expires_at and api_key_record.expires_at < datetime.utcnow():
+        return None
+
+    # Update last_used timestamp
+    api_key_record.last_used = datetime.utcnow()
+    db.commit()
+
+    # Get associated user
+    user = db.query(User).filter(User.id == api_key_record.user_id).first()
+
+    # Check if user is active
+    if not user or not user.is_active:
+        return None
+
+    return user
+
+
+def get_current_user_or_api_key(
+    request: Request,
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """
+    Get current user from JWT token OR API key.
+    Returns None if neither is valid.
+    """
+    # First try JWT token
+    token = extract_token_from_header(request)
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            email: str = payload.get("sub")
+            if email:
+                user = db.query(User).filter(User.email == email).first()
+                if user and user.is_active:
+                    return user
+        except (JWTError, Exception):
+            pass
+
+    # Then try API key
+    api_key = request.headers.get("X-API-Key")
+    if api_key:
+        key_hash = hashlib.sha256(api_key.encode()).hexdigest()
+        api_key_record = db.query(ApiKey).filter(
+            ApiKey.key_hash == key_hash,
+            ApiKey.is_active == True
+        ).first()
+
+        if api_key_record:
+            if not api_key_record.expires_at or api_key_record.expires_at >= datetime.utcnow():
+                api_key_record.last_used = datetime.utcnow()
+                db.commit()
+
+                user = db.query(User).filter(User.id == api_key_record.user_id).first()
+                if user and user.is_active:
+                    return user
+
+    return None
