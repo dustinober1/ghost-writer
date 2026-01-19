@@ -1,4 +1,15 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    ForeignKey,
+    JSON,
+    Boolean,
+    Float,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -7,15 +18,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/ghostwriter")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", "postgresql://user:password@localhost:5432/ghostwriter"
+)
 
 # Create engine with connection pool settings
-# pool_pre_ping=True will verify connections before using them
+# pool_pre_ping=True will verify connections before using
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using
-    pool_recycle=300,    # Recycle connections after 5 minutes
-    echo=False           # Set to True for SQL query logging
+    pool_recycle=300,  # Recycle connections after 5 minutes
+    echo=False,  # Set to True for SQL query logging
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -36,10 +49,21 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    writing_samples = relationship("WritingSample", back_populates="user", cascade="all, delete-orphan")
-    fingerprints = relationship("Fingerprint", back_populates="user", cascade="all, delete-orphan")
-    analysis_results = relationship("AnalysisResult", back_populates="user", cascade="all, delete-orphan")
-    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    writing_samples = relationship(
+        "WritingSample", back_populates="user", cascade="all, delete-orphan"
+    )
+    fingerprints = relationship(
+        "Fingerprint", back_populates="user", cascade="all, delete-orphan"
+    )
+    analysis_results = relationship(
+        "AnalysisResult", back_populates="user", cascade="all, delete-orphan"
+    )
+    refresh_tokens = relationship(
+        "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+    )
+    batch_jobs = relationship(
+        "BatchAnalysisJob", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class WritingSample(Base):
@@ -76,7 +100,9 @@ class AnalysisResult(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     text_content = Column(Text, nullable=False)
     heat_map_data = Column(JSON, nullable=False)  # Array of segments with scores
-    overall_ai_probability = Column(String, nullable=False)  # Float as string for precision
+    overall_ai_probability = Column(
+        String, nullable=False
+    )  # Float as string for precision
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -118,6 +144,49 @@ class EmailVerificationToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class BatchAnalysisJob(Base):
+    __tablename__ = "batch_analysis_jobs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="PENDING", nullable=False, index=True)
+    total_documents = Column(Integer, default=0, nullable=False)
+    processed_documents = Column(Integer, default=0, nullable=False)
+    granularity = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+    similarity_matrix = Column(JSON, nullable=True)
+    clusters = Column(JSON, nullable=True)
+
+    user = relationship("User", back_populates="batch_jobs")
+    documents = relationship(
+        "BatchDocument", back_populates="job", cascade="all, delete-orphan"
+    )
+
+
+class BatchDocument(Base):
+    __tablename__ = "batch_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    job_id = Column(Integer, ForeignKey("batch_analysis_jobs.id"), nullable=False)
+    filename = Column(String, nullable=False)
+    source_type = Column(String, nullable=False)
+    text_content = Column(Text, nullable=False)
+    word_count = Column(Integer, nullable=False)
+    status = Column(String, default="PENDING", nullable=False, index=True)
+    ai_probability = Column(Float, nullable=True)
+    confidence_distribution = Column(JSON, nullable=True)
+    heat_map_data = Column(JSON, nullable=True)
+    embedding = Column(JSON, nullable=True)
+    cluster_id = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    job = relationship("BatchAnalysisJob", back_populates="documents")
+
+
 def get_db():
     """Dependency for getting database session"""
     db = SessionLocal()
@@ -135,4 +204,6 @@ def init_db():
     except Exception as e:
         print(f"⚠️  Warning: Could not initialize database: {e}")
         print("   The application will continue, but database features will not work.")
-        print("   Please check your DATABASE_URL in .env file and ensure PostgreSQL is running.")
+        print(
+            "   Please check your DATABASE_URL in .env file and ensure PostgreSQL is running."
+        )
