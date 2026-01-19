@@ -47,6 +47,7 @@ class User(Base):
     failed_login_attempts = Column(Integer, default=0, nullable=False)
     locked_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    tier = Column(String, default="free", nullable=False)  # 'free', 'pro', 'enterprise'
 
     # Relationships
     writing_samples = relationship(
@@ -63,6 +64,9 @@ class User(Base):
     )
     batch_jobs = relationship(
         "BatchAnalysisJob", back_populates="user", cascade="all, delete-orphan"
+    )
+    api_keys = relationship(
+        "ApiKey", back_populates="user", cascade="all, delete-orphan"
     )
 
 
@@ -121,6 +125,23 @@ class RefreshToken(Base):
 
     # Relationships
     user = relationship("User", back_populates="refresh_tokens")
+
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    key_hash = Column(String, unique=True, index=True, nullable=False)  # SHA-256 hash
+    key_prefix = Column(String, index=True, nullable=False)  # First 8 chars for identification
+    name = Column(String, nullable=False)  # User-defined key name
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_used = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    user = relationship("User", back_populates="api_keys")
 
 
 class PasswordResetToken(Base):
