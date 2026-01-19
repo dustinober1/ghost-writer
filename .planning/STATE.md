@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 7 (complete)
-Plan: 4 of 4 in Phase 5
-Status: Phase 5 Complete - Fingerprint Comparison API and UI
-Last activity: 2026-01-19 — Completed 05-04-PLAN.md (Fingerprint Comparison API and UI)
+Plan: 6 of 6 in Phase 5
+Status: Phase 5 Complete - Enhanced Fingerprinting with Drift Detection
+Last activity: 2026-01-19 — Completed 05-06-PLAN.md (Drift Detection API and UI)
 
-Progress: [████████████████░░░░░░░░░░] 61% (18/28 total plans complete)
+Progress: [████████████████████░░░░░] 64% (19/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 9 minutes
-- Total execution time: 2.6 hours
+- Total execution time: 2.8 hours
 
 **By Phase:**
 
@@ -31,14 +31,14 @@ Progress: [████████████████░░░░░░░
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
 | 4. Multi-Model Ensemble | 3 | 3 | 10 minutes |
-| 5. Enhanced Fingerprinting | 4 | 4 | 5 minutes |
+| 5. Enhanced Fingerprinting | 6 | 6 | 5 minutes |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (14 min), 05-01 (5 min), 05-02 (8 min), 05-03 (3 min), 05-04 (4 min)
-- Trend: Phase 5 complete - enhanced fingerprinting with comparison API
-- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, corpus API endpoints, CorpusBuilder React component, TimeWeightedFingerprintBuilder, FingerprintComparator, comparison endpoints, FingerprintProfile component
+- Last 5 plans: 05-02 (8 min), 05-03 (3 min), 05-04 (4 min), 05-05 (2 min), 05-06 (8 min)
+- Trend: Phase 5 complete - enhanced fingerprinting with drift detection UI
+- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, corpus API endpoints, CorpusBuilder React component, TimeWeightedFingerprintBuilder, FingerprintComparator, comparison endpoints, FingerprintProfile component, drift detection backend, drift API and UI
 
 *Updated after each phase completion*
 
@@ -187,6 +187,13 @@ Recent decisions affecting current work:
 4. **No cascade delete on fingerprint_id** - Preserves alert history even if fingerprint is regenerated for retrospective analysis
 5. **Negative z-score interpretation** - Positive z-score indicates text is LESS similar than baseline (potential drift), negative z-score indicates text is MORE similar than baseline
 
+**From Plan 05-06 (Drift Detection API and UI):**
+1. **In-memory detector cache** - Dict-based cache per user_id for fast detector access. Faster than database serialization, acceptable for single-instance deployments.
+2. **Separate /status endpoint** - Dedicated endpoint for debugging and visibility without triggering drift checks. Returns window contents and thresholds.
+3. **Expanded alert cards** - Collapsible detail view shows full feature change breakdown. Default collapsed to reduce clutter when multiple alerts exist.
+4. **Feature name localization** - FEATURE_NAMES mapping provides human-readable labels for all 27 stylometric features. Improves UX over raw feature keys.
+5. **Unacknowledged count badge** - ProfileManager tab shows count of unacknowledged alerts, prompting users to review style changes.
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -225,8 +232,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 22:08 UTC
-Stopped at: Completed 05-04-PLAN.md (Fingerprint Comparison API and UI)
+Last session: 2026-01-19 22:16 UTC
+Stopped at: Completed 05-06-PLAN.md (Drift Detection API and UI)
 Resume file: None
 
 **Infrastructure Note:**
@@ -305,3 +312,9 @@ Resume file: None
 - **NEW:** fingerprintAPI.compare() and fingerprintAPI.getProfile() methods in frontend/src/services/api.ts
 - **NEW:** FingerprintProfile React component (374 lines) with similarity checker
 - **NEW:** ProfileManager tab: "Fingerprint Profile" (disabled until fingerprint exists)
+- **NEW:** Drift detection API endpoints: GET /drift/alerts, POST /drift/check, POST /drift/acknowledge/{id}, POST /drift/baseline, GET /drift/status
+- **NEW:** FingerprintService drift methods: get_drift_detector(), check_drift_and_create_alert(), get_drift_alerts(), acknowledge_alert()
+- **NEW:** driftAPI object with 5 methods in frontend/src/services/api.ts
+- **NEW:** DriftAlerts React component (280+ lines) with severity badges, feature change table, confidence interval visualization
+- **NEW:** ProfileManager tab: "Drift Alerts" with unacknowledged count badge
+- **NEW:** FEATURE_NAMES mapping for human-readable stylometric feature labels
