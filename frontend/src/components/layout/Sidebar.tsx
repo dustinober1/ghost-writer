@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, User, PenTool, History, Menu, X, Layers } from 'lucide-react';
+import { LayoutDashboard, FileText, User, PenTool, History, Menu, X, Layers, Key } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { path: '/history', label: 'History', icon: History },
   { path: '/profile', label: 'Profile & Fingerprint', icon: User },
   { path: '/rewrite', label: 'Style Rewriting', icon: PenTool },
+  { path: '/api-dash', label: 'API Dashboard', icon: Key },
 ];
 
 export default function Sidebar() {

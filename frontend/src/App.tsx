@@ -21,6 +21,7 @@ const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 const History = lazy(() => import('./components/Dashboard/History'));
 const BatchAnalysis = lazy(() => import('./components/BatchAnalysis/BatchAnalysis'));
 const BatchResults = lazy(() => import('./components/BatchResults/BatchResults'));
+const ApiDashboard = lazy(() => import('./components/ApiDashboard/ApiDashboard'));
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -181,6 +182,18 @@ function AnimatedRoutes() {
                   isAuthenticated ? (
                     <Container className="py-8">
                       <BatchResults />
+                    </Container>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+              <Route
+                path="/api-dash"
+                element={
+                  isAuthenticated ? (
+                    <Container className="py-8">
+                      <ApiDashboard />
                     </Container>
                   ) : (
                     <Navigate to="/login" replace />
