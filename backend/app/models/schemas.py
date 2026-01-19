@@ -469,3 +469,132 @@ class WeightsResponse(BaseModel):
     perplexity: float
     contrastive: float
     last_updated: Optional[datetime] = None
+
+
+# Temporal Analysis Schemas
+class DocumentVersionCreate(BaseModel):
+    """Request to create a new document version"""
+
+    document_id: str = Field(..., min_length=1, description="External document identifier")
+    content: str = Field(..., min_length=1, description="Document text content")
+    granularity: str = Field(default="sentence", description="Analysis granularity")
+
+
+class DocumentVersionResponse(BaseModel):
+    """Response with document version details"""
+
+    version_id: int
+    version_number: int
+    document_id: str
+    created_at: datetime
+    word_count: int
+    overall_ai_probability: float
+    segment_ai_scores: Optional[List[Dict]] = None
+
+
+class TimelineDataPoint(BaseModel):
+    """Single data point in the document timeline"""
+
+    version_id: int
+    version_number: int
+    timestamp: str
+    word_count: int
+    avg_ai_prob: float
+    max_ai_prob: float
+    min_ai_prob: float
+    std_ai_prob: float
+    high_confidence_count: int
+    medium_confidence_count: int
+    low_confidence_count: int
+    overall_ai_probability: float
+
+
+class TimelineResponse(BaseModel):
+    """Response with document timeline analysis"""
+
+    timeline: List[TimelineDataPoint]
+    overall_trend: str  # 'increasing', 'decreasing', 'stable', 'insufficient_data'
+    ai_velocity: float
+    total_versions: int
+    error: Optional[str] = None
+
+
+class InjectionEvent(BaseModel):
+    """AI injection event detected between versions"""
+
+    version: int
+    version_id: int
+    timestamp: str
+    position: int
+    text: str
+    ai_probability: float
+    type: str  # 'addition' or 'modification'
+    severity: str  # 'high', 'medium', 'low'
+    delta_ai: Optional[float] = None
+    old_text: Optional[str] = None
+    new_text: Optional[str] = None
+
+
+class MixedAuthorshipIndicator(BaseModel):
+    """Indicator suggesting mixed human-AI authorship"""
+
+    type: str  # 'variance_discrepancy', 'probability_spike', 'version_shift'
+    description: str
+    value: float
+    severity: str  # 'high', 'medium', 'low'
+    version: Optional[int] = None
+    from_version: Optional[int] = None
+    to_version: Optional[int] = None
+    segment_index: Optional[int] = None
+
+
+class InjectionResponse(BaseModel):
+    """Response with AI injection analysis"""
+
+    injection_events: List[InjectionEvent]
+    injection_score: float
+    total_injections: int
+    additions_count: int
+    modifications_count: int
+    severity_breakdown: Dict[str, int]
+    mixed_authorship_indicators: List[MixedAuthorshipIndicator]
+    overall_risk: str  # 'high', 'medium', 'low', 'none'
+
+
+class VersionComparisonRequest(BaseModel):
+    """Request to compare two document versions"""
+
+    document_id: str = Field(..., min_length=1)
+    version_a: int = Field(..., ge=1, description="First version number")
+    version_b: int = Field(..., ge=1, description="Second version number")
+
+
+class DiffSection(BaseModel):
+    """A section of text that was added, removed, or modified"""
+
+    text: str
+    position: int
+    ai_probability: Optional[float] = None
+    old_text: Optional[str] = None
+    new_text: Optional[str] = None
+    old_position: Optional[int] = None
+    delta_ai: Optional[float] = None
+
+
+class VersionComparison(BaseModel):
+    """Comparison result between two document versions"""
+
+    added_sections: List[DiffSection]
+    removed_sections: List[DiffSection]
+    modified_sections: List[DiffSection]
+    similarity_score: float
+    version_a_number: int
+    version_b_number: int
+
+
+class VersionsListResponse(BaseModel):
+    """Response listing all versions of a document"""
+
+    versions: List[DocumentVersionResponse]
+    total_versions: int
+    document_id: str

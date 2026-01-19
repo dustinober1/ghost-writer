@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch, api_keys, docs, api_usage, ensemble
+from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch, api_keys, docs, api_usage, ensemble, temporal
 from app.models.database import init_db
 from app.utils.db_check import check_db_connection
 from app.middleware.rate_limit import get_rate_limiter, _rate_limit_exceeded_handler
@@ -138,6 +138,7 @@ app.include_router(api_keys.router)
 app.include_router(docs.router)
 app.include_router(api_usage.router)
 app.include_router(ensemble.router)
+app.include_router(temporal.router)
 
 
 # In development mode, optionally provide public docs for convenience
