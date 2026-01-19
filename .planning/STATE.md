@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 
 ## Current Position
 
-Phase: 4 of 7 (complete)
-Plan: 3 of 3 in Phase 4
-Status: Phase 4 Complete - Moving to Phase 5
-Last activity: 2026-01-19 — Completed Phase 4 (Multi-Model Ensemble)
+Phase: 5 of 7 (in progress)
+Plan: 1 of 4 in Phase 5
+Status: Phase 5 Plan 1 Complete - Corpus Fingerprint Data Models
+Last activity: 2026-01-19 — Completed 05-01-PLAN.md (Corpus-Based Fingerprint Data Models)
 
-Progress: [███████████████░░░░░░░░░░░░] 54% (15/28 total plans complete)
+Progress: [███████████████░░░░░░░░░░░░] 57% (16/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 10 minutes
-- Total execution time: 2.3 hours
+- Total plans completed: 16
+- Average duration: 9 minutes
+- Total execution time: 2.5 hours
 
 **By Phase:**
 
@@ -31,14 +31,14 @@ Progress: [███████████████░░░░░░░░
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
 | 3. Enterprise API | 4 | 4 | 3 minutes |
 | 4. Multi-Model Ensemble | 3 | 3 | 10 minutes |
-| 5. Enhanced Fingerprinting | 4 | 0 | TBD |
+| 5. Enhanced Fingerprinting | 4 | 1 | 5 minutes |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 03-04 (5 min), 04-01 (8 min), 04-02 (8 min), 04-03 (14 min)
-- Trend: Phase 4 complete with excellent velocity on ensemble features
-- Phase 4 delivered: EnsembleDetector, base detectors, weights, calibration, performance monitoring, ensemble API, temporal analysis, injection detection
+- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min)
+- Trend: Phase 5 started with corpus-based fingerprint data models
+- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder
 
 *Updated after each phase completion*
 
@@ -154,6 +154,14 @@ Recent decisions affecting current work:
 5. **Per-segment AI probability storage** - Stores segment-level scores in JSON for each version. Enables granular injection detection at specific text positions.
 6. **SVG-based line chart without external dependencies** - Uses native SVG with polyline for timeline visualization. Avoids heavy charting libraries while providing clear visual feedback.
 
+**From Plan 05-01 (Corpus-Based Fingerprint Data Models):**
+1. **MIN_SAMPLES_FOR_FINGERPRINT = 10** - Balances statistical robustness with practical data collection requirements
+2. **Three aggregation methods: time_weighted (default), average, source_weighted** - Flexibility for different use cases and corpus compositions
+3. **Welford's online algorithm for feature statistics** - Numerically stable variance calculation for confidence interval computation
+4. **Source weights: academic=1.3, essay=1.2, document=1.1, blog=1.0, manual=1.0, email=0.9** - Formal writing prioritized in aggregation
+5. **JSON storage for features and feature_statistics** - Flexibility without schema migrations, supports 27-element feature arrays
+6. **written_at timestamp separate from created_at** - Enables time-weighted aggregation based on original writing date vs. database insertion
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -192,8 +200,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 21:28 UTC
-Stopped at: Completed 04-03-PLAN.md (Temporal Analysis and AI Injection Detection)
+Last session: 2026-01-19 21:57 UTC
+Stopped at: Completed 05-01-PLAN.md (Corpus-Based Fingerprint Data Models)
 Resume file: None
 
 **Infrastructure Note:**
@@ -233,3 +241,9 @@ Resume file: None
 - **NEW:** VersionTracker, TimelineAnalyzer, InjectionDetector classes
 - **NEW:** Temporal analysis API: POST /version, GET /timeline, /versions, /injections, POST /compare, GET /summary
 - **NEW:** React TemporalAnalysis component with timeline visualization, injection display, version comparison (858 lines)
+- **NEW:** FingerprintSample and EnhancedFingerprint database tables
+- **NEW:** FingerprintCorpusBuilder at backend/app/ml/fingerprint/corpus_builder.py
+- **NEW:** MIN_SAMPLES_FOR_FINGERPRINT = 10 constant
+- **NEW:** Pydantic schemas: FingerprintSampleCreate, CorpusStatus, EnhancedFingerprintResponse
+- **NEW:** Three aggregation methods: time_weighted (EMA), average, source_weighted
+- **NEW:** Welford's online algorithm for feature statistics (mean, std, variance)
