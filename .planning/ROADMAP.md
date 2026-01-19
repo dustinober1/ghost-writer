@@ -136,12 +136,15 @@ Plans:
 2. System applies time-weighted training (recent writing weighted higher) to account for natural style evolution while maintaining consistent core patterns
 3. User receives alerts when writing style drifts significantly from their fingerprint, with confidence intervals and specific feature changes highlighted
 
-**Plans**: 3 plans in 3 waves
+**Plans**: 6 plans in 4 waves
 
 Plans:
-- [ ] 05-01-PLAN.md — Corpus builder for fingerprint generation (FingerprintSample/EnhancedFingerprint tables, FingerprintCorpusBuilder, corpus API, CorpusBuilder UI)
-- [ ] 05-02-PLAN.md — Time-weighted training algorithm (TimeWeightedFingerprintBuilder with EMA, FingerprintComparator with confidence intervals, comparison API, FingerprintProfile UI)
-- [ ] 05-03-PLAN.md — Style drift detection and alerting (DriftAlert table, StyleDriftDetector, drift API, DriftAlerts UI)
+- [ ] 05-01-PLAN.md — Corpus backend foundation (FingerprintSample/EnhancedFingerprint tables, schemas, FingerprintCorpusBuilder)
+- [ ] 05-02-PLAN.md — Corpus API and UI (corpus endpoints, FingerprintService, CorpusBuilder component, ProfileManager integration)
+- [ ] 05-03-PLAN.md — Time-weighted ML modules (TimeWeightedFingerprintBuilder with EMA, FingerprintComparator, module exports)
+- [ ] 05-04-PLAN.md — Comparison API and UI (comparison schemas, endpoints, FingerprintProfile component)
+- [ ] 05-05-PLAN.md — Drift detection backend (DriftAlert table, StyleDriftDetector, drift schemas)
+- [ ] 05-06-PLAN.md — Drift detection API and UI (drift endpoints, DriftAlerts component, ProfileManager integration)
 
 ---
 
@@ -196,7 +199,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | 2. Batch Analysis | 3/3 | Complete | 2026-01-19 |
 | 3. Enterprise API | 4/4 | Complete | 2026-01-19 |
 | 4. Multi-Model Ensemble | 3/3 | Complete | 2026-01-19 |
-| 5. Enhanced Fingerprinting | 0/3 | Not started | - |
+| 5. Enhanced Fingerprinting | 0/6 | Not started | - |
 | 6. Style Transfer | 0/TBD | Not started | - |
 | 7. Distribution | 0/TBD | Not started | - |
 
