@@ -14,6 +14,7 @@ from app.utils.cache import (
     text_hash, get_cached_analysis, cache_analysis_result,
     get_cached_features, cache_features
 )
+from app.models.schemas import ConfidenceLevel
 
 
 class AnalysisService:
@@ -114,7 +115,8 @@ class AnalysisService:
                 "text": segment,
                 "ai_probability": float(ai_probability),
                 "start_index": start_index,
-                "end_index": end_index
+                "end_index": end_index,
+                "confidence_level": self._calculate_confidence_level(float(ai_probability))
             })
         
         # Calculate overall AI probability
@@ -122,10 +124,18 @@ class AnalysisService:
             overall_ai_probability = np.mean([s["ai_probability"] for s in segment_results])
         else:
             overall_ai_probability = 0.5  # Default neutral
-        
+
+        # Calculate confidence distribution
+        confidence_distribution = {
+            "HIGH": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.HIGH),
+            "MEDIUM": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.MEDIUM),
+            "LOW": sum(1 for s in segment_results if s["confidence_level"] == ConfidenceLevel.LOW)
+        }
+
         result = {
             "segments": segment_results,
             "overall_ai_probability": float(overall_ai_probability),
+            "confidence_distribution": confidence_distribution,
             "granularity": granularity
         }
         
@@ -139,34 +149,51 @@ class AnalysisService:
         """
         Estimate AI probability from features using heuristics.
         This is a fallback when no user fingerprint is available.
-        
+
         Args:
             features: Feature vector
-        
+
         Returns:
             AI probability (0 to 1)
         """
         # Simple heuristic based on feature values
         # Lower burstiness and perplexity = more AI-like
         # This is a simplified approach; in production, use the trained model
-        
+
         # Normalize features to 0-1 range for this heuristic
         # Features: [burstiness, perplexity, rare_word_ratio, unique_word_ratio, ...]
-        
+
         if len(features) < 2:
             return 0.5
-        
+
         burstiness = features[0] if len(features) > 0 else 0.5
         perplexity = features[1] if len(features) > 1 else 0.5
-        
+
         # AI text tends to have lower burstiness and more predictable patterns
         # Combine these into an AI probability score
         ai_score = (1.0 - burstiness) * 0.6 + (1.0 - min(perplexity / 100.0, 1.0)) * 0.4
-        
+
         # Clamp to [0, 1]
         ai_probability = max(0.0, min(1.0, ai_score))
-        
+
         return float(ai_probability)
+
+    def _calculate_confidence_level(self, probability: float) -> ConfidenceLevel:
+        """
+        Calculate confidence level category from AI probability.
+
+        Args:
+            probability: AI probability (0 to 1)
+
+        Returns:
+            ConfidenceLevel enum value (HIGH, MEDIUM, or LOW)
+        """
+        if probability > 0.7:
+            return ConfidenceLevel.HIGH
+        elif probability >= 0.4:
+            return ConfidenceLevel.MEDIUM
+        else:
+            return ConfidenceLevel.LOW
     
     def analyze_with_fingerprint(
         self,

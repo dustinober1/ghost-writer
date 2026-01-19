@@ -1,6 +1,15 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Dict, Optional
 from datetime import datetime
+from enum import Enum
+
+
+# Confidence Level Enum
+class ConfidenceLevel(str, Enum):
+    """Confidence level for AI probability categorization"""
+    HIGH = "HIGH"      # > 0.7
+    MEDIUM = "MEDIUM"  # 0.4 - 0.7
+    LOW = "LOW"        # < 0.4
 
 
 # User Schemas
@@ -72,11 +81,13 @@ class TextSegment(BaseModel):
     ai_probability: float
     start_index: int
     end_index: int
+    confidence_level: ConfidenceLevel
 
 
 class HeatMapData(BaseModel):
     segments: List[TextSegment]
     overall_ai_probability: float
+    confidence_distribution: Optional[Dict[str, int]] = None  # {"HIGH": count, "MEDIUM": count, "LOW": count}
 
 
 class AnalysisRequest(BaseModel):
