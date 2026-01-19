@@ -68,6 +68,9 @@ class User(Base):
     api_keys = relationship(
         "ApiKey", back_populates="user", cascade="all, delete-orphan"
     )
+    document_versions = relationship(
+        "DocumentVersion", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class WritingSample(Base):
@@ -221,6 +224,26 @@ class ModelPerformance(Base):
     brier_score = Column(Float, nullable=True)  # Probability calibration quality
     last_updated = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     metadata = Column(JSON, nullable=True)  # Additional metrics per-model
+
+
+class DocumentVersion(Base):
+    """Track document versions for temporal analysis and AI injection detection."""
+    __tablename__ = "document_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    document_id = Column(String, nullable=False, index=True)  # External document identifier
+    version_number = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    content_hash = Column(String, nullable=False, index=True)  # SHA-256 for deduplication
+    segment_ai_scores = Column(JSON, nullable=True)  # Per-segment AI scores
+    overall_ai_probability = Column(Float, nullable=False)
+    word_count = Column(Integer, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    analysis_metadata = Column(JSON, nullable=True)  # Full analysis result
+
+    # Relationship
+    user = relationship("User", back_populates="document_versions")
 
 
 def get_db():
