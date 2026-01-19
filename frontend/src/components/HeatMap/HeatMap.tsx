@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Alert from '../ui/Alert';
 import { Tabs, TabsList, TabsTrigger } from '../ui/Tabs';
-import { ArrowLeft, Download, Share2, Info, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { ArrowLeft, Download, Share2, Info, TrendingUp, TrendingDown, Minus, Repeat2, X } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { cn } from '../../utils/cn';
 
@@ -13,6 +13,16 @@ interface FeatureAttribution {
   feature_name: string;
   importance: number;
   interpretation: string;
+}
+
+interface OverusedPattern {
+  pattern_type: 'repeated_phrase' | 'sentence_start' | 'word_repetition';
+  pattern: string;
+  count: number;
+  locations: number[];
+  severity: 'HIGH' | 'MEDIUM' | 'LOW';
+  percentage?: number;
+  examples?: string[];
 }
 
 interface TextSegment {
@@ -34,6 +44,7 @@ interface HeatMapData {
     low: number;
   };
   document_explanation?: string;
+  overused_patterns?: OverusedPattern[];
 }
 
 interface AnalysisResult {
@@ -47,6 +58,7 @@ export default function HeatMap() {
   const [granularity, setGranularity] = useState<'sentence' | 'paragraph'>('sentence');
   const [selectedSegment, setSelectedSegment] = useState<TextSegment | null>(null);
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
+  const [dismissPatternCard, setDismissPatternCard] = useState(false);
   const navigate = useNavigate();
   const { success } = useToast();
 
@@ -139,6 +151,59 @@ export default function HeatMap() {
     if (importance > 0.7) return 'high';
     if (importance > 0.4) return 'medium';
     return 'low';
+  };
+
+  // Pattern-related helper functions
+  const getPatternSeverityVariant = (severity: 'HIGH' | 'MEDIUM' | 'LOW'): 'error' | 'warning' | 'success' => {
+    switch (severity) {
+      case 'HIGH':
+        return 'error';
+      case 'MEDIUM':
+        return 'warning';
+      case 'LOW':
+        return 'success';
+      default:
+        return 'success';
+    }
+  };
+
+  const getPatternTypeLabel = (patternType: string): string => {
+    switch (patternType) {
+      case 'repeated_phrase':
+        return 'Repeated Phrase';
+      case 'sentence_start':
+        return 'Sentence Start';
+      case 'word_repetition':
+        return 'Word Repetition';
+      default:
+        return 'Pattern';
+    }
+  };
+
+  const getPatternHighlightsInSegment = (segment: TextSegment): OverusedPattern[] => {
+    if (!heat_map_data.overused_patterns) return [];
+
+    return heat_map_data.overused_patterns.filter(pattern =>
+      pattern.locations.some(location =>
+        location >= segment.start_index && location < segment.end_index
+      )
+    );
+  };
+
+  const scrollToLocation = (location: number) => {
+    // Find the segment that contains this location
+    const targetSegment = heat_map_data.segments.find(seg =>
+      location >= seg.start_index && location < seg.end_index
+    );
+
+    if (targetSegment) {
+      setSelectedSegment(targetSegment);
+      // Scroll the segment into view
+      const segmentElement = document.querySelector(`[data-segment-index="${targetSegment.start_index}"]`);
+      if (segmentElement) {
+        segmentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   };
 
   const handleExport = (format: 'json' | 'csv' | 'pdf') => {
@@ -313,6 +378,90 @@ export default function HeatMap() {
             </Card>
           )}
 
+          {/* Repetitive Patterns Card */}
+          {heat_map_data.overused_patterns && heat_map_data.overused_patterns.length > 0 && !dismissPatternCard && (
+            <Card className="border-orange-200 dark:border-orange-800">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Repeat2 className="h-5 w-5 text-orange-500" />
+                    <CardTitle>Repetitive Patterns Detected</CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDismissPatternCard(true)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <CardDescription>
+                  {heat_map_data.overused_patterns.length} pattern{heat_map_data.overused_patterns.length > 1 ? 's' : ''} found that may indicate AI-generated content
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {heat_map_data.overused_patterns.slice(0, 5).map((pattern, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors cursor-pointer"
+                    onClick={() => scrollToLocation(pattern.locations[0])}
+                  >
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {getPatternTypeLabel(pattern.pattern_type)}
+                          </span>
+                          <Badge variant={getPatternSeverityVariant(pattern.severity)} size="sm">
+                            {pattern.severity}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 italic">
+                          "{pattern.pattern}"
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {pattern.count}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          use{pattern.count > 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    {pattern.percentage !== undefined && (
+                      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                        <span>Frequency</span>
+                        <span className="font-medium">{(pattern.percentage * 100).toFixed(1)}%</span>
+                      </div>
+                    )}
+                    {pattern.examples && pattern.examples.length > 0 && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-primary-500 cursor-pointer hover:underline">
+                          View examples
+                        </summary>
+                        <ul className="mt-1 ml-4 text-xs text-gray-600 dark:text-gray-400 list-disc">
+                          {pattern.examples.slice(0, 2).map((example, exIdx) => (
+                            <li key={exIdx}>{example}</li>
+                          ))}
+                          {pattern.examples.length > 2 && (
+                            <li className="text-gray-400">and {pattern.examples.length - 2} more...</li>
+                          )}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ))}
+                {heat_map_data.overused_patterns.length > 5 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2">
+                    And {heat_map_data.overused_patterns.length - 5} more patterns...
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Granularity Selector */}
           <Card>
             <CardHeader>
@@ -364,7 +513,7 @@ export default function HeatMap() {
           <Card>
             <CardHeader>
               <CardTitle>Text Analysis</CardTitle>
-              <CardDescription>Click on segments to view detailed information</CardDescription>
+              <CardDescription>Click on segments to view detailed information. Patterns are highlighted in text.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-lg min-h-[300px] leading-relaxed">
@@ -374,10 +523,58 @@ export default function HeatMap() {
                   const isSelected = selectedSegment === segment;
                   const isHovered = hoveredSegment === index;
                   const confidenceVariant = getConfidenceVariant(segment.confidence_level);
+                  const segmentPatterns = getPatternHighlightsInSegment(segment);
+
+                  // Get the most severe pattern for this segment (if any)
+                  const mostSeverePattern = segmentPatterns.length > 0
+                    ? segmentPatterns.reduce((prev, current) =>
+                        prev.severity === 'HIGH' ? prev :
+                        current.severity === 'HIGH' ? current :
+                        prev.severity === 'MEDIUM' ? prev : current
+                      )
+                    : null;
+
+                  // Determine pattern highlight color
+                  const getPatternHighlightStyle = () => {
+                    if (!mostSeverePattern) return {};
+                    const severity = mostSeverePattern.severity;
+                    if (severity === 'HIGH') {
+                      return {
+                        borderBottom: '3px solid rgba(239, 68, 68, 0.8)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)'
+                      };
+                    } else if (severity === 'MEDIUM') {
+                      return {
+                        borderBottom: '3px solid rgba(251, 191, 36, 0.8)',
+                        backgroundColor: 'rgba(251, 191, 36, 0.1)'
+                      };
+                    } else {
+                      return {
+                        borderBottom: '3px solid rgba(156, 163, 175, 0.8)',
+                        backgroundColor: 'rgba(156, 163, 175, 0.1)'
+                      };
+                    }
+                  };
+
+                  // Create tooltip text with pattern information
+                  const getTooltipText = () => {
+                    let tooltip = `AI Probability: ${(segment.ai_probability * 100).toFixed(1)}% (${segment.confidence_level})\n${getConfidenceDescription(segment.confidence_level)}`;
+                    if (segmentPatterns.length > 0) {
+                      tooltip += '\n\nPatterns detected:';
+                      segmentPatterns.slice(0, 2).forEach(p => {
+                        tooltip += `\n- ${getPatternTypeLabel(p.pattern_type)}: "${p.pattern}" (${p.count}x)`;
+                      });
+                      if (segmentPatterns.length > 2) {
+                        tooltip += `\n- and ${segmentPatterns.length - 2} more...`;
+                      }
+                    }
+                    return tooltip;
+                  };
 
                   return (
                     <span
                       key={index}
+                      data-segment-index={segment.start_index}
                       className={cn(
                         'inline-block px-1 py-0.5 mx-0.5 rounded cursor-pointer transition-all relative',
                         isSelected && 'ring-2 ring-primary-500 ring-offset-2',
@@ -389,11 +586,12 @@ export default function HeatMap() {
                         border: confidenceVariant === 'error' ? '2px solid rgba(239, 68, 68, 0.5)' :
                                confidenceVariant === 'warning' ? '2px solid rgba(251, 191, 36, 0.5)' :
                                '2px solid rgba(34, 197, 94, 0.5)',
+                        ...getPatternHighlightStyle()
                       }}
                       onClick={() => setSelectedSegment(segment)}
                       onMouseEnter={() => setHoveredSegment(index)}
                       onMouseLeave={() => setHoveredSegment(null)}
-                      title={`AI Probability: ${(segment.ai_probability * 100).toFixed(1)}% (${segment.confidence_level})\n${getConfidenceDescription(segment.confidence_level)}`}
+                      title={getTooltipText()}
                     >
                       {segment.text}
                       {/* Confidence Badge Overlay */}
@@ -407,6 +605,20 @@ export default function HeatMap() {
                       >
                         {segment.confidence_level.charAt(0)}
                       </span>
+                      {/* Pattern Indicator */}
+                      {segmentPatterns.length > 0 && (
+                        <span
+                          className={cn(
+                            'absolute -bottom-1 -right-1 text-[8px] font-bold px-1 py-0 rounded-sm leading-none',
+                            mostSeverePattern?.severity === 'HIGH' && 'bg-red-500 text-white',
+                            mostSeverePattern?.severity === 'MEDIUM' && 'bg-yellow-500 text-white',
+                            mostSeverePattern?.severity === 'LOW' && 'bg-gray-500 text-white'
+                          )}
+                          title={`${segmentPatterns.length} pattern${segmentPatterns.length > 1 ? 's' : ''} detected`}
+                        >
+                          P
+                        </span>
+                      )}
                     </span>
                   );
                 })}
@@ -664,6 +876,36 @@ export default function HeatMap() {
                     {heat_map_data.segments.length}
                   </span>
                 </div>
+
+                {/* Pattern Statistics */}
+                {heat_map_data.overused_patterns && heat_map_data.overused_patterns.length > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Repetitive Patterns</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {heat_map_data.overused_patterns.length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Repeated Phrases</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {heat_map_data.overused_patterns.filter(p => p.pattern_type === 'repeated_phrase').length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Sentence Starts</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {heat_map_data.overused_patterns.filter(p => p.pattern_type === 'sentence_start').length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600 dark:text-gray-400">Word Repetitions</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {heat_map_data.overused_patterns.filter(p => p.pattern_type === 'word_repetition').length}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
