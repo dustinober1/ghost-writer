@@ -12,6 +12,22 @@ class ConfidenceLevel(str, Enum):
     LOW = "LOW"        # < 0.4
 
 
+# Pattern Type Enum
+class PatternType(str, Enum):
+    """Type of overused pattern detected"""
+    REPEATED_PHRASE = "repeated_phrase"
+    SENTENCE_START = "sentence_start"
+    WORD_REPETITION = "word_repetition"
+
+
+# Pattern Severity Enum
+class PatternSeverity(str, Enum):
+    """Severity level of overused pattern"""
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+
 # User Schemas
 class UserBase(BaseModel):
     email: EmailStr
@@ -83,6 +99,17 @@ class FeatureAttribution(BaseModel):
     interpretation: str  # Human-readable explanation
 
 
+class OverusedPattern(BaseModel):
+    """Overused pattern detected in text"""
+    pattern_type: PatternType
+    pattern: str  # The actual repeated text
+    count: int = Field(..., ge=2, description="Number of occurrences (must be at least 2)")
+    locations: List[int] = Field(..., min_items=1, description="Start indices in text where pattern occurs")
+    severity: PatternSeverity
+    percentage: Optional[float] = Field(None, ge=0, le=1, description="Percentage of total (for sentence starts/word freq)")
+    examples: Optional[List[str]] = Field(None, description="Sample occurrences of the pattern")
+
+
 class TextSegment(BaseModel):
     text: str
     ai_probability: float
@@ -96,6 +123,7 @@ class HeatMapData(BaseModel):
     segments: List[TextSegment]
     overall_ai_probability: float
     confidence_distribution: Optional[Dict[str, int]] = None  # {"HIGH": count, "MEDIUM": count, "LOW": count}
+    overused_patterns: Optional[List[OverusedPattern]] = None  # Detected overused patterns
 
 
 class AnalysisRequest(BaseModel):
