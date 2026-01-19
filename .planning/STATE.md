@@ -10,25 +10,25 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 2 of 7 (Batch Analysis)
-Plan: 2 of 5 in current phase
+Plan: 3 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-19 — Completed plan 02-02 (Batch Similarity Clustering)
+Last activity: 2026-01-19 — Completed plan 02-03 (Batch Upload and Results Dashboard)
 
-Progress: [███████████] 21% (6/28 total plans complete)
+Progress: [████████████] 25% (7/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 13 minutes
-- Total execution time: 1.3 hours
+- Total plans completed: 7
+- Average duration: 14 minutes
+- Total execution time: 1.6 hours
 
 **By Phase:**
 
 | Phase | Plans | Complete | Avg/Plan |
 |-------|-------|----------|----------|
 | 1. Explainability | 4 | 4 | 15 minutes |
-| 2. Batch Analysis | 5 | 2 | 7 minutes |
+| 2. Batch Analysis | 5 | 3 | 10 minutes |
 | 3. Enterprise API | 4 | 0 | TBD |
 | 4. Multi-Model Ensemble | 3 | 0 | TBD |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
@@ -36,9 +36,9 @@ Progress: [███████████] 21% (6/28 total plans complete)
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (30 min), 01-03 (4 min), 01-04 (20 min), 02-01 (8 min), 02-02 (5 min)
-- Trend: Steady progress, infrastructure stable
-- Phase 1 complete, Phase 2 clustering infrastructure ready
+- Last 5 plans: 01-02 (30 min), 01-03 (4 min), 01-04 (20 min), 02-01 (8 min), 02-02 (5 min), 02-03 (15 min)
+- Trend: Steady progress, batch analysis UI complete
+- Phase 1 complete, Phase 2 batch upload and results dashboard functional
 
 *Updated after each plan completion*
 
@@ -90,6 +90,14 @@ Recent decisions affecting current work:
 4. **Default clustering threshold 0.85** - Balances sensitivity (catching similar docs) with specificity (avoiding over-clustering)
 5. **Function + Class API pattern** - Top-level functions for direct use, BatchAnalysisService class for dependency injection
 
+**From Plan 02-03 (Batch Upload and Results Dashboard):**
+1. **ZIP file extraction for bulk uploads** - Single ZIP can contain multiple .txt files for improved UX with large batches
+2. **Celery for non-blocking processing** - API returns immediately with job_id, actual analysis runs asynchronously with progress updates
+3. **Overview-first dashboard layout** - Summary cards (documents, clusters, avg probability) shown before detailed tables
+4. **Similarity heatmap via CSS grid** - No heavy visualization libraries; simple color-coded grid shows pairwise similarity
+5. **Polling for status updates** - Frontend polls every 2-3 seconds during processing; navigates to results on completion
+6. **Export streaming response** - CSV/JSON exports use FastAPI StreamingResponse for memory efficiency
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -122,9 +130,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 19:13 UTC
-Stopped at: Completed plan 02-02 (Batch Similarity Clustering)
-Resume file: None (Plan 02-02 complete, ready for 02-03)
+Last session: 2026-01-19 19:28 UTC
+Stopped at: Completed plan 02-03 (Batch Upload and Results Dashboard)
+Resume file: None (Plan 02-03 complete, ready for 02-04)
 
 **Infrastructure Note:**
 - Ollama service added to docker-compose.yml (llama3:8b, nomic-embed-text:v1.5 models)
@@ -134,3 +142,7 @@ Resume file: None (Plan 02-02 complete, ready for 02-03)
 - Slowapi parameter naming conflict resolved (avoid `request` parameter name in endpoints)
 - Batch analysis tables added via Alembic migration 002_add_batch_analysis_tables
 - BatchAnalysisService with build_similarity_matrix, cluster_documents, summarize_clusters methods
+- Batch API routes added: /api/batch/upload, /status, /results, /export, /jobs
+- Celery task process_batch_job for async document processing with embedding generation
+- React BatchAnalysis component with drag-drop, ZIP support, progress tracking
+- React BatchResults component with overview cards, clusters, similarity heatmap, export buttons
