@@ -45,6 +45,39 @@ export interface EnhancedFingerprintResponse {
   updated_at: string;
 }
 
+// Fingerprint Comparison Types
+export interface ConfidenceInterval {
+  lower: number;
+  upper: number;
+}
+
+export interface FeatureDeviation {
+  feature: string;
+  text_value: number;
+  fingerprint_value: number;
+  deviation: number;
+}
+
+export interface FingerprintComparisonResponse {
+  similarity: number;
+  confidence_interval: ConfidenceInterval;
+  match_level: 'HIGH' | 'MEDIUM' | 'LOW';
+  feature_deviations: FeatureDeviation[];
+  method_used: string;
+  corpus_size?: number;
+}
+
+export interface FingerprintProfile {
+  has_fingerprint: boolean;
+  corpus_size?: number;
+  method?: string;
+  alpha?: number;
+  source_distribution?: Record<string, number> | null;
+  created_at?: string;
+  updated_at?: string;
+  feature_count: number;
+}
+
 // Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
@@ -205,6 +238,18 @@ export const fingerprintAPI = {
       });
       return response.data;
     },
+  },
+  // Comparison methods
+  compare: async (text: string, useEnhanced: boolean = true): Promise<FingerprintComparisonResponse> => {
+    const response = await api.post('/api/fingerprint/compare', {
+      text,
+      use_enhanced: useEnhanced,
+    });
+    return response.data;
+  },
+  getProfile: async (): Promise<FingerprintProfile> => {
+    const response = await api.get('/api/fingerprint/profile');
+    return response.data;
   },
 };
 
