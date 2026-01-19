@@ -12,6 +12,39 @@ const api = axios.create({
   },
 });
 
+// ============= Corpus Types =============
+
+export interface FingerprintSampleResponse {
+  id: number;
+  user_id: number;
+  source_type: string;
+  word_count: number;
+  created_at: string;
+  written_at: string | null;
+  text_preview: string;
+}
+
+export interface CorpusStatus {
+  sample_count: number;
+  total_words: number;
+  source_distribution: Record<string, number>;
+  ready_for_fingerprint: boolean;
+  samples_needed: number;
+  oldest_sample: string | null;
+  newest_sample: string | null;
+}
+
+export interface EnhancedFingerprintResponse {
+  id: number;
+  user_id: number;
+  corpus_size: number;
+  method: string;
+  alpha: number;
+  source_distribution: Record<string, number> | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
@@ -142,6 +175,36 @@ export const fingerprintAPI = {
       weight,
     });
     return response.data;
+  },
+  // Corpus management methods
+  corpus: {
+    add: async (text: string, sourceType: string = 'manual', writtenAt?: string): Promise<FingerprintSampleResponse> => {
+      const response = await api.post('/api/fingerprint/corpus/add', {
+        text_content: text,
+        source_type: sourceType,
+        written_at: writtenAt,
+      });
+      return response.data;
+    },
+    getStatus: async (): Promise<CorpusStatus> => {
+      const response = await api.get('/api/fingerprint/corpus/status');
+      return response.data;
+    },
+    getSamples: async (page: number = 1, pageSize: number = 20): Promise<FingerprintSampleResponse[]> => {
+      const response = await api.get('/api/fingerprint/corpus/samples', {
+        params: { page, page_size: pageSize },
+      });
+      return response.data;
+    },
+    deleteSample: async (sampleId: number): Promise<void> => {
+      await api.delete(`/api/fingerprint/corpus/sample/${sampleId}`);
+    },
+    generateFingerprint: async (method: string = 'time_weighted', alpha: number = 0.3): Promise<EnhancedFingerprintResponse> => {
+      const response = await api.post('/api/fingerprint/corpus/generate', null, {
+        params: { method, alpha },
+      });
+      return response.data;
+    },
   },
 };
 
