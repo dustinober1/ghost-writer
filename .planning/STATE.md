@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 ## Current Position
 
 Phase: 5 of 7 (in progress)
-Plan: 3 of 4 in Phase 5
-Status: Phase 5 Plan 3 Complete - Time-Weighted Training and Similarity Calculation
-Last activity: 2026-01-19 — Completed 05-03-PLAN.md (Time-Weighted Training and Similarity Calculation)
+Plan: 2 of 4 in Phase 5
+Status: Phase 5 Plan 2 Complete - Corpus Management API and UI
+Last activity: 2026-01-19 — Completed 05-02-PLAN.md (Corpus Management API and UI)
 
 Progress: [████████████████░░░░░░░░░░░] 61% (17/28 total plans complete)
 
@@ -36,9 +36,9 @@ Progress: [████████████████░░░░░░░
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min), 05-03 (3 min)
+- Last 5 plans: 04-02 (8 min), 04-03 (14 min), 05-01 (5 min), 05-02 (8 min), 05-03 (3 min)
 - Trend: Phase 5 progressing through enhanced fingerprinting
-- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, TimeWeightedFingerprintBuilder, FingerprintComparator
+- Phase 5 delivered: FingerprintSample, EnhancedFingerprint tables, corpus schemas, FingerprintCorpusBuilder, corpus API endpoints, CorpusBuilder React component, TimeWeightedFingerprintBuilder, FingerprintComparator
 
 *Updated after each phase completion*
 
@@ -162,6 +162,15 @@ Recent decisions affecting current work:
 5. **JSON storage for features and feature_statistics** - Flexibility without schema migrations, supports 27-element feature arrays
 6. **written_at timestamp separate from created_at** - Enables time-weighted aggregation based on original writing date vs. database insertion
 
+**From Plan 05-02 (Corpus Management API and UI):**
+1. **10 sample minimum for enhanced fingerprint** - Statistical robustness threshold enforced at API and UI levels
+2. **Source type metadata (essay, academic, blog, email, document, manual)** - Enables source-weighted aggregation and corpus diversity tracking
+3. **Separated corpus samples from basic writing samples** - Independent data models (FingerprintSample vs WritingSample) for different use cases
+4. **Progress indicator with color coding (red <5, yellow 5-9, green 10+)** - Visual feedback for corpus readiness
+5. **Drag-and-drop file upload support** - Improved UX for bulk sample addition
+6. **Tab-based UI (Basic Fingerprint vs Enhanced Corpus)** - Maintains backward compatibility while adding new features
+7. **Pagination for sample list (20 per page)** - Efficient rendering for large corpora
+
 **From Plan 05-03 (Time-Weighted Training and Similarity Calculation):**
 1. **EMA alpha=0.3** - Balances recency sensitivity with stability for writing style evolution tracking
 2. **Lambda = -ln(alpha) for recency weight calculation** - Ensures mathematical consistency between EMA smoothing and exponential time decay
@@ -209,8 +218,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 22:01 UTC
-Stopped at: Completed 05-03-PLAN.md (Time-Weighted Training and Similarity Calculation)
+Last session: 2026-01-19 22:06 UTC
+Stopped at: Completed 05-02-PLAN.md (Corpus Management API and UI)
 Resume file: None
 
 **Infrastructure Note:**
@@ -256,6 +265,17 @@ Resume file: None
 - **NEW:** Pydantic schemas: FingerprintSampleCreate, CorpusStatus, EnhancedFingerprintResponse
 - **NEW:** Three aggregation methods: time_weighted (EMA), average, source_weighted
 - **NEW:** Welford's online algorithm for feature statistics (mean, std, variance)
+- **NEW:** Corpus management API endpoints: POST /corpus/add, GET /corpus/status, GET /corpus/samples, DELETE /corpus/sample/{id}, POST /corpus/generate
+- **NEW:** FingerprintService corpus methods: add_corpus_sample, get_corpus_status, list_corpus_samples, delete_corpus_sample, generate_enhanced_fingerprint
+- **NEW:** TypeScript interfaces: FingerprintSampleResponse, CorpusStatus, EnhancedFingerprintResponse
+- **NEW:** fingerprintAPI.corpus object with 5 methods in frontend/src/services/api.ts
+- **NEW:** CorpusBuilder React component (615 lines) at frontend/src/components/ProfileManager/CorpusBuilder.tsx
+- **NEW:** ProfileManager tabs: Basic Fingerprint and Enhanced Corpus
+- **NEW:** Progress indicator: red <5, yellow 5-9, green 10+ samples
+- **NEW:** Source type selector with 6 options (essay, academic, document, blog, email, manual)
+- **NEW:** Drag-and-drop file upload for .txt, .docx, .pdf files
+- **NEW:** Pagination for sample list (20 per page)
+- **NEW:** Delete confirmation modal for corpus samples
 - **NEW:** TimeWeightedFingerprintBuilder at backend/app/ml/fingerprint/time_weighted_trainer.py (370 lines)
 - **NEW:** EMA update formula: new_ema = (1-alpha)*old_ema + alpha*new_sample
 - **NEW:** Recency weight calculation: weight = exp(-lambda*age), lambda = -ln(alpha)
