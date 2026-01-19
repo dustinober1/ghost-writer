@@ -1,0 +1,7 @@
+{
+  "mode": "yolo",
+  "depth": "comprehensive",
+  "parallel": true,
+  "project": "ghost-writer",
+  "version": "1.0.0"
+}
