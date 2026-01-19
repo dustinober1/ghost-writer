@@ -77,6 +77,9 @@ class User(Base):
     enhanced_fingerprints = relationship(
         "EnhancedFingerprint", back_populates="user", cascade="all, delete-orphan"
     )
+    drift_alerts = relationship(
+        "DriftAlert", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class WritingSample(Base):
@@ -286,6 +289,26 @@ class EnhancedFingerprint(Base):
 
     # Relationship
     user = relationship("User", back_populates="enhanced_fingerprints")
+
+
+class DriftAlert(Base):
+    """Style drift detection alerts."""
+    __tablename__ = "drift_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    fingerprint_id = Column(Integer, nullable=False)  # Reference to EnhancedFingerprint.id
+    severity = Column(String, nullable=False, index=True)  # 'warning' or 'alert'
+    similarity_score = Column(Float, nullable=False)  # Current similarity that triggered drift
+    baseline_similarity = Column(Float, nullable=False)  # User's baseline average similarity
+    z_score = Column(Float, nullable=False)  # Statistical distance from baseline
+    changed_features = Column(JSON, nullable=True)  # Features that changed most
+    text_preview = Column(String, nullable=True)  # First 200 chars of text that triggered
+    acknowledged = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationship
+    user = relationship("User", back_populates="drift_alerts")
 
 
 def get_db():
