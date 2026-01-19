@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch
+from app.api.routes import auth, analysis, fingerprint, rewrite, analytics, account, admin, batch, api_keys
 from app.models.database import init_db
 from app.utils.db_check import check_db_connection
 from app.middleware.rate_limit import get_rate_limiter, _rate_limit_exceeded_handler
@@ -143,6 +143,7 @@ app.include_router(analytics.router)
 app.include_router(account.router)
 app.include_router(admin.router)
 app.include_router(batch.router)
+app.include_router(api_keys.router)
 
 
 @app.on_event("startup")
