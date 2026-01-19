@@ -248,11 +248,17 @@ def health_check():
         pass
     health_status["model"] = model_status
     
-    # Overall status
-    if not is_connected or not ollama_status["available"]:
+    # Overall status - require database but allow degraded without Ollama
+    if not is_connected:
+        health_status["status"] = "unhealthy"
+        status_code = 503
+    elif not ollama_status["available"]:
         health_status["status"] = "degraded"
-    
-    status_code = 200 if health_status["status"] == "healthy" else 503
+        status_code = 200  # Service is usable without Ollama
+    else:
+        health_status["status"] = "healthy"
+        status_code = 200
+
     return JSONResponse(content=health_status, status_code=status_code)
 
 
