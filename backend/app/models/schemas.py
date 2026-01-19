@@ -117,6 +117,7 @@ class TextSegment(BaseModel):
     end_index: int
     confidence_level: ConfidenceLevel
     feature_attribution: Optional[List[FeatureAttribution]] = None  # Top 5 contributing features
+    sentence_explanation: Optional[str] = None  # Natural language explanation for this segment
 
 
 class HeatMapData(BaseModel):
@@ -124,6 +125,7 @@ class HeatMapData(BaseModel):
     overall_ai_probability: float
     confidence_distribution: Optional[Dict[str, int]] = None  # {"HIGH": count, "MEDIUM": count, "LOW": count}
     overused_patterns: Optional[List[OverusedPattern]] = None  # Detected overused patterns
+    document_explanation: Optional[str] = None  # Natural language explanation for overall document
 
 
 class AnalysisRequest(BaseModel):

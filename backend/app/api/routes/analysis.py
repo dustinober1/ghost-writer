@@ -59,7 +59,9 @@ def analyze_text(
                 ai_probability=seg["ai_probability"],
                 start_index=seg["start_index"],
                 end_index=seg["end_index"],
-                confidence_level=seg["confidence_level"]
+                confidence_level=seg["confidence_level"],
+                feature_attribution=seg.get("feature_attribution"),
+                sentence_explanation=seg.get("sentence_explanation")
             )
             for seg in result["segments"]
         ]
@@ -67,7 +69,9 @@ def analyze_text(
         heat_map_data = HeatMapData(
             segments=segments,
             overall_ai_probability=result["overall_ai_probability"],
-            confidence_distribution=result.get("confidence_distribution")
+            confidence_distribution=result.get("confidence_distribution"),
+            overused_patterns=result.get("overused_patterns"),
+            document_explanation=result.get("document_explanation")
         )
         
         # Save analysis result
