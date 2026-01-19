@@ -207,6 +207,68 @@ class FingerprintProfile(BaseModel):
     feature_count: int = 27  # Number of stylometric features
 
 
+# Drift Detection Schemas
+class DriftSeverity(str, Enum):
+    """Severity level for style drift detection."""
+    WARNING = "warning"
+    ALERT = "alert"
+    NONE = "none"
+
+
+class FeatureChange(BaseModel):
+    """Single feature change detected during drift analysis."""
+    feature: str
+    current_value: float
+    baseline_value: float
+    normalized_deviation: float
+
+
+class DriftDetectionResult(BaseModel):
+    """Result from drift detection analysis."""
+    drift_detected: bool
+    severity: DriftSeverity
+    similarity: float
+    baseline_mean: float
+    z_score: float
+    confidence_interval: List[float]  # [lower, upper]
+    changed_features: List[FeatureChange]
+    timestamp: Optional[datetime] = None
+    reason: Optional[str] = None  # E.g., "baseline_not_established"
+
+
+class DriftAlertResponse(BaseModel):
+    """Response schema for drift alerts."""
+    id: int
+    severity: DriftSeverity
+    similarity_score: float
+    baseline_similarity: float
+    z_score: float
+    changed_features: List[FeatureChange]
+    text_preview: Optional[str] = None
+    acknowledged: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DriftAlertsList(BaseModel):
+    """List of drift alerts with summary."""
+    alerts: List[DriftAlertResponse]
+    total: int
+    unacknowledged_count: int
+
+
+class DriftStatus(BaseModel):
+    """Current drift detector status for a user."""
+    baseline_established: bool
+    baseline_mean: Optional[float] = None
+    baseline_std: Optional[float] = None
+    current_window_size: int
+    unacknowledged_alerts: int
+    last_check: Optional[datetime] = None
+
+
 # Analysis Schemas
 class FeatureAttribution(BaseModel):
     """Individual feature attribution for explaining AI detection"""
