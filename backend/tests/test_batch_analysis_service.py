@@ -115,17 +115,21 @@ class TestBuildSimilarityMatrix:
     def test_realistic_embeddings(self):
         """Test with realistic embedding values."""
         # Simulated normalized embeddings (real embeddings are unit vectors)
+        # All properly normalized to unit length
         embeddings = [
-            [0.577, 0.577, 0.577],
-            [0.707, 0.707, 0.0],
-            [0.0, 0.0, 1.0],
+            [0.57735, 0.57735, 0.57735],  # normalized [1,1,1]
+            [0.70711, 0.70711, 0.0],      # normalized [1,1,0]
+            [0.0, 0.0, 1.0],              # normalized [0,0,1]
         ]
         result = build_similarity_matrix(embeddings)
         assert len(result) == 3
-        # First two are at 45 degrees, cos(45) = 0.707
-        assert abs(result[0][1] - 0.707) < 0.01
-        # First and third are at ~54.7 degrees
-        assert 0.0 < result[0][2] < 1.0
+        # First two: dot = 0.57735*0.70711 + 0.57735*0.70711 + 0.57735*0 = ~0.816
+        # (approx 35 degrees between them)
+        assert abs(result[0][1] - 0.816) < 0.01
+        # First and third: dot = 0.57735 (approx 55 degrees)
+        assert abs(result[0][2] - 0.577) < 0.01
+        # Second and third: orthogonal (dot = 0)
+        assert abs(result[1][2]) < 0.01
 
     def test_different_dimensions(self):
         """Handle different embedding dimensions."""
