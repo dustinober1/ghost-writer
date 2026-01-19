@@ -208,6 +208,21 @@ class BatchDocument(Base):
     job = relationship("BatchAnalysisJob", back_populates="documents")
 
 
+class ModelPerformance(Base):
+    """Track per-model performance for ensemble weight optimization."""
+    __tablename__ = "model_performance"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String, nullable=False, index=True)  # stylometric, perplexity, contrastive, ensemble
+    correct_count = Column(Integer, default=0, nullable=False)
+    total_count = Column(Integer, default=0, nullable=False)
+    accuracy = Column(Float, default=0.0, nullable=False)  # Computed field
+    avg_confidence = Column(Float, nullable=True)  # Average confidence when prediction > 0.7
+    brier_score = Column(Float, nullable=True)  # Probability calibration quality
+    last_updated = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    metadata = Column(JSON, nullable=True)  # Additional metrics per-model
+
+
 def get_db():
     """Dependency for getting database session"""
     db = SessionLocal()
