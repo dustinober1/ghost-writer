@@ -214,12 +214,28 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.email == token_data.email).first()
     if user is None:
         raise credentials_exception
-    
+
     # Check if user is active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is deactivated"
         )
-    
+
     return user
+
+
+def get_current_user_optional(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+    """
+    Get the current authenticated user from JWT token, but return None if not authenticated.
+    Used for development mode to allow API testing without full auth flow.
+    """
+    # In development mode, if no token provided, return None
+    if os.getenv("ENVIRONMENT") == "development" and not token:
+        return None
+
+    # Try to get user, but return None if auth fails
+    try:
+        return get_current_user(token, db)
+    except HTTPException:
+        return None
