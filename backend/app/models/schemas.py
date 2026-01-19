@@ -396,3 +396,76 @@ class EnsembleAnalysisRequest(BaseModel):
         default=None,
         description="Optional custom weights for ensemble models"
     )
+
+
+# Ensemble Management Schemas
+class ModelStats(BaseModel):
+    """Performance statistics for a single model"""
+
+    model_name: str
+    accuracy: float
+    total_predictions: int
+    correct_predictions: int
+    avg_confidence: float
+    last_updated: datetime
+    ema_accuracy: float = 0.5
+
+
+class CalibrationMetrics(BaseModel):
+    """Calibration quality metrics"""
+
+    brier_score: Optional[float] = None
+    last_calibrated: Optional[datetime] = None
+    method: str = 'sigmoid'  # 'sigmoid' or 'isotonic'
+    cv_folds: int = 5
+    is_fitted: bool = False
+
+
+class EnsembleStatsResponse(BaseModel):
+    """Response with ensemble performance statistics"""
+
+    model_stats: List[ModelStats]
+    calibration_metrics: CalibrationMetrics
+    current_weights: Dict[str, float]
+    ensemble_accuracy: float
+    total_predictions: int
+    last_updated: Optional[datetime] = None
+
+
+class CalibrateRequest(BaseModel):
+    """Request to recalibrate the ensemble"""
+
+    method: str = Field(default='sigmoid', pattern='^(sigmoid|isotonic)$')
+    cv: int = Field(default=5, ge=2, le=10)
+
+
+class CalibrateResponse(BaseModel):
+    """Response after calibration"""
+
+    status: str
+    brier_score: Optional[float] = None
+    timestamp: datetime
+    method: str
+    cv_folds: int
+
+
+class UpdateWeightsRequest(BaseModel):
+    """Request to manually update ensemble weights"""
+
+    stylometric: float = Field(..., ge=0.05, le=0.9)
+    perplexity: float = Field(..., ge=0.05, le=0.9)
+    contrastive: float = Field(..., ge=0.05, le=0.9)
+
+    def validate_weights(self) -> bool:
+        """Ensure weights sum to approximately 1.0"""
+        total = self.stylometric + self.perplexity + self.contrastive
+        return abs(total - 1.0) < 0.01
+
+
+class WeightsResponse(BaseModel):
+    """Response with current ensemble weights"""
+
+    stylometric: float
+    perplexity: float
+    contrastive: float
+    last_updated: Optional[datetime] = None
