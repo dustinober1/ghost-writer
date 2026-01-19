@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2025-01-18)
 
 ## Current Position
 
-Phase: 3 of 7 (in progress)
-Plan: 3 of 4 in Phase 3
-Status: Phase 3 Plans 1, 2, 3 complete
-Last activity: 2026-01-19 — Completed 03-02 (Tiered Rate Limiting)
+Phase: 3 of 7 (complete)
+Plan: 4 of 4 in Phase 3
+Status: Phase 3 Complete - Moving to Phase 4
+Last activity: 2026-01-19 — Completed 03-04 (API Usage Dashboard)
 
-Progress: [████████████] 39% (11/28 total plans complete)
+Progress: [████████████] 43% (12/28 total plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 10 minutes
-- Total execution time: 1.8 hours
+- Total execution time: 1.9 hours
 
 **By Phase:**
 
@@ -29,16 +29,16 @@ Progress: [████████████] 39% (11/28 total plans complete
 |-------|-------|----------|----------|
 | 1. Explainability | 4 | 4 | 15 minutes |
 | 2. Batch Analysis | 3 | 3 | 11 minutes |
-| 3. Enterprise API | 4 | 3 | 2 minutes |
+| 3. Enterprise API | 4 | 4 | 3 minutes |
 | 4. Multi-Model Ensemble | 3 | 0 | TBD |
 | 5. Enhanced Fingerprinting | 4 | 0 | TBD |
 | 6. Style Transfer | 4 | 0 | TBD |
 | 7. Distribution | 4 | 0 | TBD |
 
 **Recent Trend:**
-- Last 5 plans: 01-04 (20 min), 02-01 (8 min), 02-02 (5 min), 02-03 (11 min), 03-01 (2 min), 03-03 (1 min)
-- Trend: Steady progress, Phase 3 nearly complete
-- Phase 2 complete with clustering, similarity matrix, and batch upload UI
+- Last 5 plans: 02-03 (11 min), 03-01 (2 min), 03-02 (2 min), 03-03 (1 min), 03-04 (5 min)
+- Trend: Phase 3 complete, excellent velocity on API features
+- Phase 3 delivered: API keys, rate limiting, protected docs, usage dashboard
 
 *Updated after each phase completion*
 
@@ -121,6 +121,13 @@ Recent decisions affecting current work:
 3. **Explicit opt-in for public dev docs** - Requires both ENVIRONMENT=development AND ENABLE_PUBLIC_DOCS=true to prevent accidental public exposure
 4. **Tier limits in OpenAPI schema** - Rate limit information (free: 30, pro: 100, enterprise: 1000) exposed in schema for API consumers
 
+**From Plan 03-04 (API Usage Dashboard):**
+1. **One-time key display modal** - Full API key shown only after creation, then inaccessible from UI - security best practice
+2. **Usage progress bars with color coding** - Blue for daily, green for per-minute - visual distinction between quota types
+3. **Tier-based display colors** - enterprise=purple, pro=blue, free=gray - instant tier recognition
+4. **Confirmation before key deletion** - Prevents accidental loss of working API keys
+5. **External link to /docs** - Opens API documentation in new tab for reference while managing keys
+
 ### Pending Todos
 
 [From .planning/todos/pending/ — ideas captured during sessions]
@@ -159,8 +166,8 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-01-19 20:25 UTC
-Stopped at: Completed 03-02-PLAN.md (Tiered Rate Limiting)
+Last session: 2026-01-19 20:31 UTC
+Stopped at: Completed 03-04-PLAN.md (API Usage Dashboard)
 Resume file: None
 
 **Infrastructure Note:**
@@ -180,3 +187,7 @@ Resume file: None
 - Rate limit endpoints: GET /api/usage, GET /api/limits with X-RateLimit-* headers
 - Protected docs endpoints: /docs (Swagger UI), /redoc (ReDoc), /openapi.json all require auth
 - Optional public dev docs available with ENVIRONMENT=development and ENABLE_PUBLIC_DOCS=true
+- **NEW:** API Dashboard at /api-dash route with ApiDashboard component (387 lines)
+- **NEW:** apiKeysAPI and usageAPI functions in frontend/src/services/api.ts
+- **NEW:** Self-service API key creation with one-time key display modal
+- **NEW:** Usage statistics with progress bars for daily and per-minute limits
